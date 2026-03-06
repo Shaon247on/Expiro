@@ -3,107 +3,9 @@
 import { useEffect, useState } from "react";
 import { motion, useScroll } from "framer-motion";
 import Link from "next/link";
+import ExpiroLogo from "../elements/Logo";
 
 // ─── Logo ────────────────────────────────────────────────────────────────────
-const ExpiroLogo = () => (
-  <Link href="/" className="flex items-center gap-3 select-none">
-    <motion.div
-      whileHover={{ rotate: [0, -8, 8, 0] }}
-      transition={{ duration: 0.5 }}
-    >
-      <svg
-        width="48"
-        height="48"
-        viewBox="0 0 52 52"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* Outer ring */}
-        <circle cx="26" cy="26" r="24" fill="#1B5E35" />
-        <circle
-          cx="26"
-          cy="26"
-          r="23"
-          stroke="#2E8B4E"
-          strokeWidth="1.2"
-          fill="none"
-        />
-        {/* Clock face */}
-        <circle cx="26" cy="26" r="17" fill="#F0FAF4" />
-        {/* Tick marks */}
-        {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(
-          (angle, i) => {
-            const rad = (angle * Math.PI) / 180;
-            const isMajor = i % 3 === 0;
-            const r1 = isMajor ? 13.5 : 14.5;
-            const r2 = 16;
-            return (
-              <line
-                key={angle}
-                x1={26 + r1 * Math.sin(rad)}
-                y1={26 - r1 * Math.cos(rad)}
-                x2={26 + r2 * Math.sin(rad)}
-                y2={26 - r2 * Math.cos(rad)}
-                stroke={isMajor ? "#1B5E35" : "#A7D9B5"}
-                strokeWidth={isMajor ? 1.5 : 0.8}
-                strokeLinecap="round"
-              />
-            );
-          }
-        )}
-        {/* Hour hand */}
-        <line
-          x1="26"
-          y1="26"
-          x2="26"
-          y2="15"
-          stroke="#1B5E35"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        />
-        {/* Minute hand */}
-        <line
-          x1="26"
-          y1="26"
-          x2="33"
-          y2="30"
-          stroke="#1B5E35"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-        {/* Center dot */}
-        <circle cx="26" cy="26" r="2.2" fill="#1B5E35" />
-        {/* Leaf on top */}
-        <path
-          d="M34 7 C36 4 41 4 43 8 C43 8 40 14 35 12 C33 11 33 8 34 7Z"
-          fill="#2E8B4E"
-        />
-        <path
-          d="M35 8 C37 11 37 13 35 14"
-          stroke="#1B5E35"
-          strokeWidth="0.7"
-          fill="none"
-          strokeLinecap="round"
-        />
-      </svg>
-    </motion.div>
-
-    <div className="leading-none">
-      <p
-        className="text-[#1B5E35] font-bold text-[22px] tracking-tight leading-none"
-        style={{ fontFamily: "'Sora', sans-serif" }}
-      >
-        expiro
-      </p>
-      <p
-        className="text-[#3A8A54] text-[9.5px] font-medium leading-snug mt-0.5"
-        style={{ fontFamily: "'DM Sans', sans-serif" }}
-      >
-        La traçabilité qui anticipe vos DLC
-      </p>
-    </div>
-  </Link>
-);
 
 // ─── Nav Links ───────────────────────────────────────────────────────────────
 const NAV_LINKS = ["How It Works", "Features", "Vision", "Price"];
@@ -122,7 +24,7 @@ export default function Navbar() {
   return (
     <>
       <motion.header
-        className="fixed top-0 left-0 right-0 z-50"
+        className="fixed top-0 left-0 right-0 z-50 py-2"
         animate={{
           backgroundColor: scrolled
             ? "rgba(240, 250, 244, 0.65)"
@@ -137,13 +39,11 @@ export default function Navbar() {
         transition={{ duration: 0.35, ease: "easeInOut" }}
         style={{
           backdropFilter: scrolled ? "blur(20px) saturate(180%)" : "none",
-          WebkitBackdropFilter: scrolled
-            ? "blur(20px) saturate(180%)"
-            : "none",
+          WebkitBackdropFilter: scrolled ? "blur(20px) saturate(180%)" : "none",
           borderBottom: "1px solid transparent",
         }}
       >
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 h-18 flex items-center justify-between">
+        <div className="max-w-360 mx-auto px-6 py-6 lg:px-10 h-18 flex items-center justify-between">
           {/* Logo */}
           <ExpiroLogo />
 

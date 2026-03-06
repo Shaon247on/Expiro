@@ -272,9 +272,8 @@ export default function HeroSection() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15, duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-2 mb-7 rounded-full border border-green-300/70 bg-white/70 backdrop-blur-sm shadow-sm"
+            className="inline-flex items-center gap-2 px-4 py-2 mb-7 rounded-full border border-green-300/70 bg-[#E8EDDE] backdrop-blur-sm shadow-sm"
           >
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
             <span className="text-[13px] font-medium text-[#1B6E3A]">
               Full DLC Traceability in One Platform
             </span>
