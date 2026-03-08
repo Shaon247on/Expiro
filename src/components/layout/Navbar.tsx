@@ -4,22 +4,38 @@ import { useEffect, useState } from "react";
 import { motion, useScroll } from "framer-motion";
 import Link from "next/link";
 import ExpiroLogo from "../elements/Logo";
+import { Button } from "../ui/button";
+import { usePathname, useSearchParams } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { isAuthRoute } from "./NoNavSection";
 
 // ─── Logo ────────────────────────────────────────────────────────────────────
 
 // ─── Nav Links ───────────────────────────────────────────────────────────────
-const NAV_LINKS = ["How It Works", "Features", "Vision", "Price"];
+const NAV_LINKS = [
+  { label: "Home", value: "home" },
+  { label: "Features", value: "features" },
+  { label: "Vision", value: "vision" },
+  { label: "Price", value: "price" },
+];
 
 // ─── Navbar ──────────────────────────────────────────────────────────────────
 export default function Navbar() {
   const { scrollY } = useScroll();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
+  // query param name you use across routes
+  const activeSection = (searchParams.get("section") ?? "home").toLowerCase();
   useEffect(() => {
     const unsub = scrollY.on("change", (v) => setScrolled(v > 50));
     return unsub;
   }, [scrollY]);
+
+
+  if (isAuthRoute(pathname)) return null;
 
   return (
     <>
@@ -48,39 +64,59 @@ export default function Navbar() {
           <ExpiroLogo />
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map((label, i) => (
-              <motion.div
-                key={label}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + i * 0.06, duration: 0.4 }}
-              >
-                <Link
-                  href={`#${label.toLowerCase().replace(/\s+/g, "-")}`}
-                  className="relative px-4 py-2 text-[14.5px] font-medium text-[#2D4A38] hover:text-[#1B5E35] transition-colors duration-200 group"
-                  style={{ fontFamily: "'DM Sans', sans-serif" }}
+          <nav className="hidden lg:flex items-center gap-1">
+            {NAV_LINKS.map((item, i) => {
+              const isActive = activeSection === item.value;
+
+              // build URL with query param, keep current pathname
+              const href = `${pathname}?section=${encodeURIComponent(item.value)}`;
+
+              return (
+                <motion.div
+                  key={item.value}
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 + i * 0.06, duration: 0.4 }}
                 >
-                  {label}
-                  <span className="absolute bottom-1 left-4 right-4 h-[1.5px] bg-green-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-250 origin-left rounded-full" />
-                </Link>
-              </motion.div>
-            ))}
+                  <Link
+                    href={href}
+                    className={cn(
+                      "relative px-4 py-2 text-[14.5px] font-medium transition-colors duration-200 group",
+                      isActive
+                        ? "text-[#1B5E35]"
+                        : "text-[#2D4A38] hover:text-[#1B5E35]",
+                    )}
+                    style={{ fontFamily: "'DM Sans', sans-serif" }}
+                  >
+                    {item.label}
+                    <span
+                      className={cn(
+                        "absolute bottom-1 left-4 right-4 h-[1.5px] bg-green-500 transition-transform duration-250 origin-left rounded-full",
+                        isActive
+                          ? "scale-x-100"
+                          : "scale-x-0 group-hover:scale-x-100",
+                      )}
+                    />
+                  </Link>
+                </motion.div>
+              );
+            })}
           </nav>
 
           {/* CTA Buttons */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-3">
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.35, duration: 0.4 }}
             >
-              <Link
-                href="/signin"
-                className="px-5 py-2.5 rounded-xl text-[14px] font-semibold text-[#1B5E35] border border-[#1B5E35]/30 bg-white/70 hover:bg-green-50 hover:border-[#1B5E35]/60 transition-all duration-200"
-                style={{ fontFamily: "'Sora', sans-serif" }}
-              >
-                Sign In
+              <Link href="/login">
+                <Button
+                  variant={"secondary"}
+                  className="rounded-xl lg:py-6  lg:px-6"
+                >
+                  Sign In
+                </Button>
               </Link>
             </motion.div>
 
@@ -89,12 +125,10 @@ export default function Navbar() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.42, duration: 0.4 }}
             >
-              <Link
-                href="/signup"
-                className="px-5 py-2.5 rounded-xl text-[14px] font-semibold text-white bg-[#1B5E35] hover:bg-[#164d2b] shadow-[0_4px_14px_rgba(27,94,53,0.35)] hover:shadow-[0_6px_20px_rgba(27,94,53,0.45)] transition-all duration-200 active:scale-95"
-                style={{ fontFamily: "'Sora', sans-serif" }}
-              >
-                Sign Up free trial
+              <Link href="/signup">
+                <Button className="rounded-xl lg:py-6  lg:px-6">
+                  Sign Up free trialfree trial
+                </Button>
               </Link>
             </motion.div>
           </div>
@@ -102,7 +136,7 @@ export default function Navbar() {
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden flex flex-col gap-1.25 p-2"
+            className="lg:hidden flex flex-col gap-1.25 p-2"
             aria-label="Toggle menu"
           >
             <motion.span
@@ -132,20 +166,28 @@ export default function Navbar() {
             : { height: 0, opacity: 0 }
         }
         transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="fixed top-18 left-0 right-0 z-40 overflow-hidden bg-white/90 backdrop-blur-xl border-b border-green-200/50 md:hidden"
+        className="fixed top-22 left-0 right-0 z-40 overflow-hidden bg-white/90 backdrop-blur-xl border-b border-green-200/5 lg:hidden"
       >
         <div className="flex flex-col px-6 py-4 gap-1">
-          {NAV_LINKS.map((label) => (
-            <Link
-              key={label}
-              href={`#${label.toLowerCase().replace(/\s+/g, "-")}`}
-              onClick={() => setMobileOpen(false)}
-              className="py-3 text-4 font-medium text-[#2D4A38] border-b border-green-100 last:border-0"
-              style={{ fontFamily: "'DM Sans', sans-serif" }}
-            >
-              {label}
-            </Link>
-          ))}
+          {NAV_LINKS.map((item) => {
+            const isActive = activeSection === item.value;
+            const href = `${pathname}?section=${encodeURIComponent(item.value)}`;
+
+            return (
+              <Link
+                key={item.value}
+                href={href}
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  "py-3 text-4 font-medium border-b border-green-100 last:border-0",
+                  isActive ? "text-[#1B5E35]" : "text-[#2D4A38]",
+                )}
+                style={{ fontFamily: "'DM Sans', sans-serif" }}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
           <div className="flex gap-3 pt-4">
             <Link
               href="/signin"

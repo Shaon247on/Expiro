@@ -344,7 +344,7 @@ export default function HeroSection() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.0, duration: 0.4 }}
-            className="flex flex-wrap items-start gap-x-8 gap-y-4 pt-6 border-t border-green-200/60"
+            className="flex flex-wrap items-start gap-x-8 gap-y-4 p-2 border-t border-green-200/60"
           >
             <StatItem
               label="EU Standards"
@@ -373,7 +373,7 @@ export default function HeroSection() {
         {/* ── Right: Falling image pyramid ── */}
         <div
           ref={pyramidRef}
-          className="shrink-0 flex items-end justify-center lg:justify-end w-full lg:w-auto"
+          className="shrink-0 hiddenf md:flex items-end justify-center lg:justify-end w-full lg:w-auto"
         >
           <ImagePyramid triggered={triggered} />
         </div>

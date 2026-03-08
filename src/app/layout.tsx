@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter, DM_Sans } from "next/font/google";
 import "./globals.css";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 
 // ─── Fonts ───────────────────────────────────────────────────────────────────
 const inter = Inter({
@@ -50,7 +52,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="antialiased bg-[#F7FCF9] text-[#121C15] selection:bg-green-200 selection:text-green-900">
+        <Navbar />
         {children}
+        <Footer/>
       </body>
     </html>
   );

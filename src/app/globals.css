@@ -4,15 +4,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
-
-
 /* ── Base ──────────────────────────────────────────────────────────────────── */
 html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-
 
 /* ── Scrollbar (webkit) ────────────────────────────────────────────────────── */
 ::-webkit-scrollbar {
@@ -85,6 +82,30 @@ html {
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+  @keyframes marquee {
+    0% {
+      transform: translateX(0%);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes marquee-reverse {
+    0% {
+      transform: translateX(-50%);
+    }
+    100% {
+      transform: translateX(0%);
+    }
+  }
+
+  --animate-marquee: marquee 18s linear infinite;
+  --animate-marquee-reverse: marquee-reverse 18s linear infinite;
+}
+
+.marquee-paused {
+  animation-play-state: paused;
 }
 
 :root {
