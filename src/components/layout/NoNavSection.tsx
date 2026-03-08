@@ -8,3 +8,9 @@ const AUTH_ROUTES = [
 
 export const isAuthRoute = (pathname: string) =>
   AUTH_ROUTES.some((r) => pathname === r || pathname.startsWith(`${r}/`));
+
+export const isDashboardRoute = (pathname: string) =>
+  pathname === "/dashboard" || pathname.startsWith("/dashboard/");
+
+export const isAuthOrDashboardRoute = (pathname: string) =>
+  isAuthRoute(pathname) || isDashboardRoute(pathname);

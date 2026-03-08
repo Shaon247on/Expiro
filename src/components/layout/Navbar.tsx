@@ -7,7 +7,7 @@ import ExpiroLogo from "../elements/Logo";
 import { Button } from "../ui/button";
 import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { isAuthRoute } from "./NoNavSection";
+import { isAuthOrDashboardRoute } from "./NoNavSection";
 
 // ─── Logo ────────────────────────────────────────────────────────────────────
 
@@ -35,7 +35,7 @@ export default function Navbar() {
   }, [scrollY]);
 
 
-  if (isAuthRoute(pathname)) return null;
+  if (isAuthOrDashboardRoute(pathname)) return null;
 
   return (
     <>

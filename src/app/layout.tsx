@@ -3,6 +3,7 @@ import { Inter, DM_Sans } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { Toaster } from "sonner";
 
 // ─── Fonts ───────────────────────────────────────────────────────────────────
 const inter = Inter({
@@ -53,6 +54,7 @@ export default function RootLayout({
     >
       <body className="antialiased bg-[#F7FCF9] text-[#121C15] selection:bg-green-200 selection:text-green-900">
         <Navbar />
+        <Toaster position="bottom-right"/>
         {children}
         <Footer/>
       </body>

@@ -24,30 +24,29 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import ExpiroLogo from "@/components/elements/Logo";
+import { useRouter } from "next/navigation";
 
 const schema = z.object({
   email: z.string().email("Please enter a valid email address."),
-  password: z.string().min(1, "Password is required."),
+  password: z.string().min(6, "Password must be at least 6 characters long."),
 });
 
 type FormValues = z.infer<typeof schema>;
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = React.useState(false);
-
+const router = useRouter()
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { email: "", password: "" },
   });
 
   function onSubmit(data: FormValues) {
-    toast("Signing you in…", {
-      description: (
-        <pre className="mt-2 rounded-md bg-muted p-3 text-xs overflow-x-auto">
-          <code>{JSON.stringify(data, null, 2)}</code>
-        </pre>
-      ),
-      position: "bottom-right",
+    console.log("clicked");
+    router.push("/dashboard")
+    toast.success("Welcome Back", {
+      description: "Login Successful...",
     });
   }
 
@@ -58,20 +57,8 @@ export default function LoginPage() {
     >
       <CardHeader className="items-center text-center pt-8 pb-2">
         {/* Logo */}
-        <div className="flex items-center gap-2 mb-4">
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: "#D4EAC8" }}
-          >
-            <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
-              <circle cx="11" cy="11" r="8" stroke="#3A7326" strokeWidth="1.8" fill="none" />
-              <path d="M7 11l3 3 5-5" stroke="#3A7326" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <div className="text-left">
-            <p className="font-bold text-base leading-tight" style={{ color: "#3A7326" }}>expiro</p>
-            <p className="text-[10px] leading-tight" style={{ color: "#51564E" }}>La traçabilité qui<br />anticipe vos DLC</p>
-          </div>
+        <div className="flex justify-center">
+          <ExpiroLogo />
         </div>
         <CardTitle className="text-2xl font-bold" style={{ color: "#1A3340" }}>
           Sign in to your Account
@@ -104,7 +91,9 @@ export default function LoginPage() {
                     aria-invalid={fieldState.invalid}
                     className="bg-white border-gray-200 rounded-xl h-12"
                   />
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
                 </Field>
               )}
             />
@@ -134,12 +123,16 @@ export default function LoginPage() {
                       type="button"
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                       onClick={() => setShowPassword((v) => !v)}
-                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
                 </Field>
               )}
             />
@@ -168,7 +161,11 @@ export default function LoginPage() {
         </Button>
         <p className="text-sm text-center" style={{ color: "#51564E" }}>
           Don&apos;t have an account?{" "}
-          <Link href="/signup" className="font-semibold hover:underline" style={{ color: "#3A7326" }}>
+          <Link
+            href="/signup"
+            className="font-semibold hover:underline"
+            style={{ color: "#3A7326" }}
+          >
             Sign up
           </Link>
         </p>

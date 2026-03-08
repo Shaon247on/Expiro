@@ -3,7 +3,7 @@
 import { Facebook, Instagram, Youtube, Twitter, Linkedin } from "lucide-react";
 import ExpiroLogo from "../elements/Logo";
 import { usePathname } from "next/navigation";
-import { isAuthRoute } from "./NoNavSection";
+import { isAuthOrDashboardRoute } from "./NoNavSection";
 
 const socialLinks = [
   { icon: Facebook, label: "Facebook" },
@@ -16,7 +16,7 @@ const socialLinks = [
 export default function Footer() {
     const pathname = usePathname();
 
-  if (isAuthRoute(pathname)) return null;
+  if (isAuthOrDashboardRoute(pathname)) return null;
   return (
     <footer className="w-full bg-white px-4 pt-12 pb-6">
       <div className="max-w-6xl mx-auto">

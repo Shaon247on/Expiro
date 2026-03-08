@@ -2,28 +2,36 @@
 
 import { motion, useAnimation } from "framer-motion";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-const leftPanelContent: Record<string, { heading: string; sub: string }> = {
+const leftPanelContent: Record<
+  string,
+  { heading: string; heading1: string; sub: string }
+> = {
   "/login": {
-    heading: "Welcome Back to\nExpiro",
+    heading: "Welcome Back to",
+    heading1: "Expiro",
     sub: "Track, manage and stay ahead of expiry dates effortlessly.",
   },
   "/signup": {
-    heading: "Getting Started With\nExpiro Technology",
+    heading: "Getting Started With",
+    heading1: "Expiro Technology",
     sub: "Join hundreds of food operations across Europe.",
   },
   "/forgot-password": {
     heading: "Recover Your\nAccount",
+    heading1: "Account",
     sub: "We'll help you get back in quickly and securely.",
   },
   "/otp-verification": {
     heading: "Verify Your\nIdentity",
+    heading1: "Identity",
     sub: "One-time code sent to keep your account safe.",
   },
   "/new-password": {
     heading: "Set a New\nPassword",
+    heading1: "Password",
     sub: "Choose a strong password to protect your account.",
   },
 };
@@ -40,7 +48,6 @@ export default function AuthLayout({
   const [displayedChildren, setDisplayedChildren] = useState(children);
   const [displayedPanel, setDisplayedPanel] = useState(panel);
   const [panelKey, setPanelKey] = useState(pathname);
-
   const drawerControls = useAnimation();
   const contentControls = useAnimation();
   const isFirstRender = useRef(true);
@@ -68,7 +75,7 @@ export default function AuthLayout({
       // 1. Squeeze the drawer to the right (scaleX → 0, origin right)
       await drawerControls.start({
         scaleX: 0,
-        transition: { duration: 0.32, ease: [0.55, 0, 1, 0.45] },
+        transition: { duration: 0.5, ease: "easeInOut" },
       });
 
       // 2. Swap content while drawer is fully collapsed
@@ -79,7 +86,7 @@ export default function AuthLayout({
       // 3. Expand the drawer back from right to left
       await drawerControls.start({
         scaleX: 1,
-        transition: { duration: 0.38, ease: [0, 0.55, 0.45, 1] },
+        transition: { duration: 0.38, ease: "easeInOut" },
       });
 
       // 4. Fade content back in
@@ -119,14 +126,20 @@ export default function AuthLayout({
           key={panelKey}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="max-w-xs"
+          transition={{ duration: 0.6, ease: "easeIn" }}
+          className="max-w-sm"
         >
           <h1
-            className="text-3xl xl:text-4xl font-bold leading-tight mb-3 whitespace-pre-line"
+            className="text-3xl xl:text-4xl leading-tight mb-3"
             style={{ color: "white" }}
           >
             {displayedPanel.heading}
+          </h1>
+          <h1
+            className="text-3xl xl:text-4xl font-bold leading-tight mb-3"
+            style={{ color: "white" }}
+          >
+            {displayedPanel.heading1}
           </h1>
           <p
             className="text-sm leading-relaxed"
