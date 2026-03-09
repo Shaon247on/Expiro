@@ -7,6 +7,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { usePathname, useSearchParams } from "next/navigation";
 
 interface Notification {
   id: number;
@@ -28,11 +29,14 @@ const NOTIFICATIONS: Notification[] = [
 const unreadCount = NOTIFICATIONS.filter((n) => !n.read).length;
 
 export default function NotificationDropdown() {
+    const pathname = usePathname();
+    
+      const isSuperAdmin = pathname.startsWith("/admin")
   return (
     <Popover>
       <PopoverTrigger asChild>
         <button
-          className="relative w-9 h-9 rounded-full flex items-center justify-center bg-blue-50 hover:bg-blue-100 transition-colors"
+          className={`relative w-9 h-9 rounded-full flex items-center justify-center bg-blue-50 hover:bg-blue-100 transition-colors ${isSuperAdmin ? "hidden":""}`}
           aria-label={`${unreadCount} unread notifications`}
         >
           <Bell size={18} style={{ color: "#3B82F6" }} aria-hidden="true" />
@@ -102,16 +106,6 @@ export default function NotificationDropdown() {
             </ul>
           )}
         </ScrollArea>
-
-        {/* Footer */}
-        <div className="border-t border-gray-100 px-4 py-2.5">
-          <button
-            className="text-xs font-semibold w-full text-center hover:underline transition-all"
-            style={{ color: "#3A7326" }}
-          >
-            View all notifications
-          </button>
-        </div>
       </PopoverContent>
     </Popover>
   );

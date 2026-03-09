@@ -11,6 +11,8 @@ export const isAuthRoute = (pathname: string) =>
 
 export const isDashboardRoute = (pathname: string) =>
   pathname === "/dashboard" || pathname.startsWith("/dashboard/");
+export const isAdminDashboardRoute = (pathname: string) =>
+  pathname === "/admin" || pathname.startsWith("/admin/");
 
 export const isAuthOrDashboardRoute = (pathname: string) =>
-  isAuthRoute(pathname) || isDashboardRoute(pathname);
+  isAuthRoute(pathname) || isDashboardRoute(pathname) || isAdminDashboardRoute;

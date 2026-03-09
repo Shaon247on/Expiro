@@ -3,14 +3,16 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import AddProductDrawer from "./AddProductDrawer";
+import { usePathname } from "next/navigation";
 
 export default function AddProductCard() {
   const [open, setOpen] = useState(false);
-
+ const pathName = usePathname()
+ const isSuperAdmin = pathName.startsWith("/admin")
   return (
     <>
       <div
-        className="relative rounded-2xl p-4 overflow-hidden"
+        className={`relative rounded-2xl p-4 overflow-hidden ${isSuperAdmin ? "hidden":""}`}
         style={{ backgroundColor: "#3A7326" }}
       >
         {/* NEW badge */}
