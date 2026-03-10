@@ -107,13 +107,13 @@ export default function OtpVerificationPage() {
       style={{ backgroundColor: "#EEF3EA" }}
     >
       <CardHeader className="items-center text-center pt-8 pb-2">
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center lg:pl-8">
           <ExpiroLogo />
         </div>
         <CardTitle className="text-2xl font-bold" style={{ color: "#1A3340" }}>
           Verify your Email
         </CardTitle>
-        <CardDescription className="max-w-xs" style={{ color: "#51564E" }}>
+        <CardDescription className="w-full" style={{ color: "#51564E" }}>
           We sent a 6-digit code to your email. Enter it below to continue.
         </CardDescription>
       </CardHeader>

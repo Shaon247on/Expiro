@@ -24,6 +24,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import ExpiroLogo from "@/components/elements/Logo";
 
 const schema = z.object({
   email: z.string().email("Please enter a valid email address."),
@@ -53,17 +54,15 @@ export default function ForgotPasswordPage() {
       style={{ backgroundColor: "#EEF3EA" }}
     >
       <CardHeader className="items-center text-center pt-8 pb-2">
-        <div
-          className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
-          style={{ backgroundColor: "#D4EAC8" }}
-        >
-          <Mail size={26} style={{ color: "#3A7326" }} aria-hidden="true" />
+        <div className="flex items-center justify-center lg:pl-8">
+          <ExpiroLogo />
         </div>
         <CardTitle className="text-2xl font-bold" style={{ color: "#1A3340" }}>
           Forgot your Password?
         </CardTitle>
-        <CardDescription className="max-w-xs" style={{ color: "#51564E" }}>
-          Enter your email address and we&apos;ll send you a one-time verification code.
+        <CardDescription className="w-full" style={{ color: "#51564E" }}>
+          Enter your email address and we&apos;ll send you a one-time
+          verification code.
         </CardDescription>
       </CardHeader>
 
@@ -90,7 +89,9 @@ export default function ForgotPasswordPage() {
                     aria-invalid={fieldState.invalid}
                     className="bg-white border-gray-200 rounded-xl h-12"
                   />
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
                 </Field>
               )}
             />
@@ -118,7 +119,11 @@ export default function ForgotPasswordPage() {
         </Button>
         <p className="text-sm text-center" style={{ color: "#51564E" }}>
           Remembered it?{" "}
-          <Link href="/login" className="font-semibold hover:underline" style={{ color: "#3A7326" }}>
+          <Link
+            href="/login"
+            className="font-semibold hover:underline"
+            style={{ color: "#3A7326" }}
+          >
             Sign in
           </Link>
         </p>

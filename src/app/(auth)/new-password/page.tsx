@@ -25,6 +25,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import ExpiroLogo from "@/components/elements/Logo";
 
 const schema = z
   .object({
@@ -99,16 +100,13 @@ export default function NewPasswordPage() {
       style={{ backgroundColor: "#EEF3EA" }}
     >
       <CardHeader className="items-center text-center pt-8 pb-2">
-        <div
-          className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
-          style={{ backgroundColor: "#D4EAC8" }}
-        >
-          <KeyRound size={26} style={{ color: "#3A7326" }} aria-hidden="true" />
+        <div className="flex items-center justify-center lg:pl-8">
+          <ExpiroLogo />
         </div>
         <CardTitle className="text-2xl font-bold" style={{ color: "#1A3340" }}>
           Set a New Password
         </CardTitle>
-        <CardDescription className="max-w-xs" style={{ color: "#51564E" }}>
+        <CardDescription className="w-full" style={{ color: "#51564E" }}>
           Choose a strong password you haven&apos;t used before.
         </CardDescription>
       </CardHeader>
@@ -151,7 +149,9 @@ export default function NewPasswordPage() {
                   <FieldDescription style={{ color: "#51564E" }}>
                     Use 8+ characters, one uppercase letter, and one number.
                   </FieldDescription>
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
                 </Field>
               )}
             />
@@ -182,12 +182,18 @@ export default function NewPasswordPage() {
                       type="button"
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                       onClick={() => setShowConfirm((v) => !v)}
-                      aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"}
+                      aria-label={
+                        showConfirm
+                          ? "Hide confirm password"
+                          : "Show confirm password"
+                      }
                     >
                       {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
                 </Field>
               )}
             />

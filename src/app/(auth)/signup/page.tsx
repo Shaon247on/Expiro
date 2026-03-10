@@ -241,16 +241,6 @@ export default function SignupPage() {
               )}
             />
           </FieldGroup>
-
-          <div className="flex justify-end mt-2">
-            <Link
-              href="/forgot-password"
-              className="text-sm font-semibold hover:underline"
-              style={{ color: "#3A7326" }}
-            >
-              Forgot Password?
-            </Link>
-          </div>
         </form>
       </CardContent>
 

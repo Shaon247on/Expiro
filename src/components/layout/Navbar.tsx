@@ -5,37 +5,42 @@ import { motion, useScroll } from "framer-motion";
 import Link from "next/link";
 import ExpiroLogo from "../elements/Logo";
 import { Button } from "../ui/button";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { isAuthOrDashboardRoute } from "./NoNavSection";
 
-// ─── Logo ────────────────────────────────────────────────────────────────────
-
-// ─── Nav Links ───────────────────────────────────────────────────────────────
 const NAV_LINKS = [
-  { label: "Home", value: "home" },
-  { label: "Features", value: "features" },
-  { label: "Vision", value: "vision" },
-  { label: "Price", value: "price" },
+  { label: "Home", href: "/" },
+  { label: "FAQ", href: "/faq" },
+  { label: "Price", href: "/pricing" },
+  { label: "About Us", href: "/about" },
+  { label: "Contact Us", href: "/contact" },
 ];
 
-// ─── Navbar ──────────────────────────────────────────────────────────────────
 export default function Navbar() {
   const { scrollY } = useScroll();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
-  // query param name you use across routes
-  const activeSection = (searchParams.get("section") ?? "home").toLowerCase();
   useEffect(() => {
-    const unsub = scrollY.on("change", (v) => setScrolled(v > 50));
-    return unsub;
+    const unsubscribe = scrollY.on("change", (value) => {
+      setScrolled(value > 50);
+    });
+
+    return unsubscribe;
   }, [scrollY]);
 
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   if (isAuthOrDashboardRoute(pathname)) return null;
+
+  const isActiveLink = (href: string) => {
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   return (
     <>
@@ -60,26 +65,21 @@ export default function Navbar() {
         }}
       >
         <div className="max-w-360 mx-auto px-6 py-6 lg:px-10 h-18 flex items-center justify-between">
-          {/* Logo */}
           <ExpiroLogo />
 
-          {/* Desktop Nav */}
           <nav className="hidden lg:flex items-center gap-1">
             {NAV_LINKS.map((item, i) => {
-              const isActive = activeSection === item.value;
-
-              // build URL with query param, keep current pathname
-              const href = `${pathname}?section=${encodeURIComponent(item.value)}`;
+              const isActive = isActiveLink(item.href);
 
               return (
                 <motion.div
-                  key={item.value}
+                  key={item.href}
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 + i * 0.06, duration: 0.4 }}
                 >
                   <Link
-                    href={href}
+                    href={item.href}
                     className={cn(
                       "relative px-4 py-2 text-[14.5px] font-medium transition-colors duration-200 group",
                       isActive
@@ -103,7 +103,6 @@ export default function Navbar() {
             })}
           </nav>
 
-          {/* CTA Buttons */}
           <div className="hidden lg:flex items-center gap-3">
             <motion.div
               initial={{ opacity: 0, x: 20 }}
@@ -112,8 +111,8 @@ export default function Navbar() {
             >
               <Link href="/login">
                 <Button
-                  variant={"secondary"}
-                  className="rounded-xl lg:py-6  lg:px-6"
+                  variant="secondary"
+                  className="rounded-xl lg:py-6 lg:px-6"
                 >
                   Sign In
                 </Button>
@@ -126,18 +125,18 @@ export default function Navbar() {
               transition={{ delay: 0.42, duration: 0.4 }}
             >
               <Link href="/signup">
-                <Button className="rounded-xl lg:py-6  lg:px-6">
-                  Sign Up free trialfree trial
+                <Button className="rounded-xl lg:py-6 lg:px-6">
+                  Sign Up Free Trial
                 </Button>
               </Link>
             </motion.div>
           </div>
 
-          {/* Mobile hamburger */}
           <button
-            onClick={() => setMobileOpen(!mobileOpen)}
+            onClick={() => setMobileOpen((prev) => !prev)}
             className="lg:hidden flex flex-col gap-1.25 p-2"
             aria-label="Toggle menu"
+            type="button"
           >
             <motion.span
               animate={mobileOpen ? { rotate: 45, y: 7 } : { rotate: 0, y: 0 }}
@@ -157,7 +156,6 @@ export default function Navbar() {
         </div>
       </motion.header>
 
-      {/* Mobile menu */}
       <motion.div
         initial={false}
         animate={
@@ -170,13 +168,12 @@ export default function Navbar() {
       >
         <div className="flex flex-col px-6 py-4 gap-1">
           {NAV_LINKS.map((item) => {
-            const isActive = activeSection === item.value;
-            const href = `${pathname}?section=${encodeURIComponent(item.value)}`;
+            const isActive = isActiveLink(item.href);
 
             return (
               <Link
-                key={item.value}
-                href={href}
+                key={item.href}
+                href={item.href}
                 onClick={() => setMobileOpen(false)}
                 className={cn(
                   "py-3 text-4 font-medium border-b border-green-100 last:border-0",
@@ -188,9 +185,10 @@ export default function Navbar() {
               </Link>
             );
           })}
+
           <div className="flex gap-3 pt-4">
             <Link
-              href="/signin"
+              href="/login"
               className="flex-1 text-center py-2.5 rounded-xl text-sm font-semibold text-[#1B5E35] border border-[#1B5E35]/30"
               style={{ fontFamily: "'Sora', sans-serif" }}
             >
@@ -201,7 +199,7 @@ export default function Navbar() {
               className="flex-1 text-center py-2.5 rounded-xl text-sm font-semibold text-white bg-[#1B5E35]"
               style={{ fontFamily: "'Sora', sans-serif" }}
             >
-              Sign Up free trial
+              Sign Up Free Trial
             </Link>
           </div>
         </div>

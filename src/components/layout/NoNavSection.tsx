@@ -7,12 +7,19 @@ const AUTH_ROUTES = [
 ] as const;
 
 export const isAuthRoute = (pathname: string) =>
-  AUTH_ROUTES.some((r) => pathname === r || pathname.startsWith(`${r}/`));
+  AUTH_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 
 export const isDashboardRoute = (pathname: string) =>
   pathname === "/dashboard" || pathname.startsWith("/dashboard/");
+
 export const isAdminDashboardRoute = (pathname: string) =>
   pathname === "/admin" || pathname.startsWith("/admin/");
 
+export const isStaffRoute = (pathname: string) =>
+  pathname === "/staff" || pathname.startsWith("/staff/");
+
 export const isAuthOrDashboardRoute = (pathname: string) =>
-  isAuthRoute(pathname) || isDashboardRoute(pathname) || isAdminDashboardRoute;
+  isAuthRoute(pathname) ||
+  isDashboardRoute(pathname) ||
+  isAdminDashboardRoute(pathname) ||
+  isStaffRoute(pathname);

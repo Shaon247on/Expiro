@@ -329,7 +329,7 @@ export default function HeroSection() {
               </Button>
             </Link>
 
-            <Link href="/demo">
+            <Link href="/contact">
               <Button variant={"secondary"} size={"lg"}>
                 <span className="text-base">
                   <Calendar fill="#3A732640" />

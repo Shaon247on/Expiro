@@ -2,7 +2,7 @@
 
 import { motion, useAnimation } from "framer-motion";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 const leftPanelContent: Record<
@@ -44,7 +44,6 @@ export default function AuthLayout({
   const pathname = usePathname();
   const panel = leftPanelContent[pathname] ?? leftPanelContent["/signup"];
 
-  // Track current displayed content separately from the route
   const [displayedChildren, setDisplayedChildren] = useState(children);
   const [displayedPanel, setDisplayedPanel] = useState(panel);
   const [panelKey, setPanelKey] = useState(pathname);
@@ -53,50 +52,60 @@ export default function AuthLayout({
   const isFirstRender = useRef(true);
   const pendingRef = useRef({ children, panel, pathname });
 
-  // Keep pending ref always up to date
   pendingRef.current = { children, panel, pathname };
 
+  // On first mount: drawer starts collapsed, then expands into view
   useEffect(() => {
-    // Skip animation on first mount
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      setDisplayedChildren(children);
-      setDisplayedPanel(panel);
-      setPanelKey(pathname);
-      return;
-    }
-
-    async function animate() {
-      // 0. Instantly hide content BEFORE any animation frame —
-      //    this prevents the new children from flashing through
-      //    while the drawer is still open.
+    async function enterAnimation() {
+      drawerControls.set({ scaleX: 0 });
       contentControls.set({ opacity: 0 });
 
-      // 1. Squeeze the drawer to the right (scaleX → 0, origin right)
-      await drawerControls.start({
-        scaleX: 0,
-        transition: { duration: 0.5, ease: "easeInOut" },
-      });
-
-      // 2. Swap content while drawer is fully collapsed
-      setDisplayedChildren(pendingRef.current.children);
-      setDisplayedPanel(pendingRef.current.panel);
-      setPanelKey(pendingRef.current.pathname);
-
-      // 3. Expand the drawer back from right to left
       await drawerControls.start({
         scaleX: 1,
-        transition: { duration: 0.38, ease: "easeInOut" },
+        transition: { duration: 0.42, ease: "easeInOut" },
       });
 
-      // 4. Fade content back in
       await contentControls.start({
         opacity: 1,
         transition: { duration: 0.22, ease: "easeOut" },
       });
     }
 
-    animate();
+    enterAnimation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // On route change within this layout: squeeze → swap → expand
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    async function transitionAnimation() {
+      contentControls.set({ opacity: 0 });
+
+      await drawerControls.start({
+        scaleX: 0,
+        transition: { duration: 0.5, ease: "easeInOut" },
+      });
+
+      setDisplayedChildren(pendingRef.current.children);
+      setDisplayedPanel(pendingRef.current.panel);
+      setPanelKey(pendingRef.current.pathname);
+
+      await drawerControls.start({
+        scaleX: 1,
+        transition: { duration: 0.38, ease: "easeInOut" },
+      });
+
+      await contentControls.start({
+        opacity: 1,
+        transition: { duration: 0.22, ease: "easeOut" },
+      });
+    }
+
+    transitionAnimation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
@@ -120,14 +129,17 @@ export default function AuthLayout({
       />
 
       {/* ── Left panel content ── */}
-      <div className="absolute inset-0 flex flex-col justify-between p-10 xl:p-16 pointer-events-none">
-        {/* Bottom heading — swaps per route */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{ width: "46%" }}
+      >
+        {/* Heading — anchored to top-left, changes per route */}
         <motion.div
           key={panelKey}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeIn" }}
-          className="max-w-sm"
+          className="absolute top-10 xl:top-16 left-10 xl:left-16 max-w-sm"
         >
           <h1
             className="text-3xl xl:text-4xl leading-tight mb-3"
@@ -148,26 +160,22 @@ export default function AuthLayout({
             {displayedPanel.sub}
           </p>
         </motion.div>
-        {/* Center illustration */}
-        <div className="flex w-1/2 h-full items-center justify-center">
+
+        {/* Illustration — absolutely centered, independent of heading */}
+        <div className="absolute inset-0 flex items-center justify-center">
           <Image
             src={"/images/authImage.png"}
             alt="auth image"
             width={562}
             height={376}
-            className=""
           />
         </div>
       </div>
 
       {/* ── Drawer panel ── */}
-      {/*
-        transformOrigin: "right center" means scaleX collapses TOWARD the right edge.
-        So the drawer squeezes away to the right, then expands back from the right.
-      */}
       <motion.div
         animate={drawerControls}
-        initial={{ scaleX: 1 }}
+        initial={{ scaleX: 0 }}
         className="absolute inset-y-0 right-0 flex w-full sm:w-[65%] lg:w-[58%] xl:w-[54%]"
         style={{
           zIndex: 10,
@@ -194,7 +202,7 @@ export default function AuthLayout({
         >
           <div className="flex-1 flex items-center justify-center px-6 sm:px-10 xl:px-14 py-12">
             <div className="w-full max-w-md">
-              <motion.div animate={contentControls} initial={{ opacity: 1 }}>
+              <motion.div animate={contentControls} initial={{ opacity: 0 }}>
                 {displayedChildren}
               </motion.div>
             </div>

@@ -4,6 +4,8 @@ import { Facebook, Instagram, Youtube, Twitter, Linkedin } from "lucide-react";
 import ExpiroLogo from "../elements/Logo";
 import { usePathname } from "next/navigation";
 import { isAuthOrDashboardRoute } from "./NoNavSection";
+import Link from "next/link";
+import { Button } from "../ui/button";
 
 const socialLinks = [
   { icon: Facebook, label: "Facebook" },
@@ -14,7 +16,7 @@ const socialLinks = [
 ];
 
 export default function Footer() {
-    const pathname = usePathname();
+  const pathname = usePathname();
 
   if (isAuthOrDashboardRoute(pathname)) return null;
   return (
@@ -26,21 +28,34 @@ export default function Footer() {
           <div className="max-w-sm">
             {/* Logo */}
             <div className="mb-10">
-                <ExpiroLogo/>
+              <ExpiroLogo />
             </div>
 
             {/* Description */}
-            <p className="text-sm leading-relaxed font-medium" style={{ color: "#3A7326" }}>
-              Digital platform for supermarkets, restaurants, and fresh food shops. Automate DLC tracking, get expiry alerts, and pass hygiene inspections effortlessly.
+            <p
+              className="text-sm leading-relaxed font-medium"
+              style={{ color: "#3A7326" }}
+            >
+              Digital platform for supermarkets, restaurants, and fresh food
+              shops. Automate DLC tracking, get expiry alerts, and pass hygiene
+              inspections effortlessly.
             </p>
           </div>
 
           {/* Right: Get in Touch + About Us + Socials */}
           <div className="flex flex-col items-start md:items-end gap-5">
-            <p className="text-base font-semibold text-black">Get in Touch</p>
-
+            <p className="text-base font-semibold text-black"></p>
+            <Link href={"/contact"}>
+              <Button variant={"link"} className="cursor-pointer text-[#2d4a38]">
+                Get in Touch
+              </Button>
+            </Link>
             <div className="flex items-center gap-5">
-              <p className="text-base font-semibold text-black">About Us</p>
+              <Link href={"/about"}>
+                <Button variant={"link"} className="cursor-pointer text-[#2d4a38]">
+                  About Us
+                </Button>
+              </Link>
               <div className="flex items-center gap-3">
                 {socialLinks.map(({ icon: Icon, label }) => (
                   <a
@@ -50,7 +65,11 @@ export default function Footer() {
                     className="w-9 h-9 rounded-full flex items-center justify-center transition-colors hover:bg-gray-100"
                     style={{ backgroundColor: "#F5F5F5" }}
                   >
-                    <Icon size={16} style={{ color: "#3A7326" }} aria-hidden="true" />
+                    <Icon
+                      size={16}
+                      style={{ color: "#3A7326" }}
+                      aria-hidden="true"
+                    />
                   </a>
                 ))}
               </div>
@@ -63,18 +82,50 @@ export default function Footer() {
 
         {/* Bottom row */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-sm" style={{ color: "#51564E" }}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <circle cx="8" cy="8" r="7" stroke="#51564E" strokeWidth="1.4" fill="none"/>
-              <text x="8" y="12" textAnchor="middle" fill="#51564E" fontSize="8" fontWeight="bold">c</text>
+          <div
+            className="flex items-center gap-2 text-sm"
+            style={{ color: "#51564E" }}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle
+                cx="8"
+                cy="8"
+                r="7"
+                stroke="#51564E"
+                strokeWidth="1.4"
+                fill="none"
+              />
+              <text
+                x="8"
+                y="12"
+                textAnchor="middle"
+                fill="#51564E"
+                fontSize="8"
+                fontWeight="bold"
+              >
+                c
+              </text>
             </svg>
             <span>2026 TrendBurst. All rights reserved.</span>
           </div>
 
-          <div className="flex items-center gap-2 text-sm" style={{ color: "#51564E" }}>
-            <a href="#" className="hover:underline">Terms &amp; Conditions</a>
+          <div
+            className="flex items-center gap-2 text-sm"
+            style={{ color: "#51564E" }}
+          >
+            <Link href="/terms" className="hover:underline">
+              Terms &amp; Conditions
+            </Link>
             <span className="text-gray-300">|</span>
-            <a href="#" className="hover:underline">Privacy Policy</a>
+            <Link href="privacy" className="hover:underline">
+              Privacy Policy
+            </Link>
           </div>
         </div>
       </div>
