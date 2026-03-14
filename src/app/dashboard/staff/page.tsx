@@ -27,7 +27,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
       >
         {/* Team icon */}
         <div
-          className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+          className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
           style={{ backgroundColor: "#EEF3EA" }}
           aria-hidden="true"
         >

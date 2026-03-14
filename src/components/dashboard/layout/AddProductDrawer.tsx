@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
-import { X, ScanLine, Upload, Plus, ImageIcon } from "lucide-react";
+import { ScanLine, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,32 +30,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import BarcodeScanner from "./BarcodeScanner";
-import Image from "next/image";
 
 // ── Zod Schema ────────────────────────────────────────────────────────────────
-const MAX_FILE_SIZE = 2 * 1024 * 1024;
+
 export const schema = z
   .object({
     categoryType: z.string().min(1, "Category is required."),
     itemName: z.string().min(2, "Item name must be at least 2 characters."),
     barcode: z.string().optional(),
-
-    // ✅ always number
     quantity: z.coerce.number().min(1, "Quantity must be at least 1."),
-
     datePurchased: z.string().min(1, "Purchase date is required."),
     dateExpire: z.string().min(1, "Expiry date is required."),
-
-    // ✅ optional AND supports empty string from the input
     openExpiryDays: z.union([
       z.coerce.number().min(0, "Must be 0 or more."),
       z.literal(""),
       z.undefined(),
     ]),
-
-    // ✅ always number
     price: z.coerce.number().min(0, "Price must be 0 or more."),
-
     description: z.string().max(300, "Max 300 characters.").optional(),
   })
   .refine((d) => new Date(d.dateExpire) > new Date(d.datePurchased), {
@@ -83,6 +74,7 @@ const labelCls = "text-xs font-semibold mb-1.5";
 const labelStyle = { color: "#3A7326" };
 
 // ── Component ─────────────────────────────────────────────────────────────────
+
 interface AddProductDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -93,11 +85,8 @@ export default function AddProductDrawer({
   onOpenChange,
 }: AddProductDrawerProps) {
   const [showScanner, setShowScanner] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const form = useForm<z.infer<typeof schema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       categoryType: "",
@@ -106,7 +95,7 @@ export default function AddProductDrawer({
       quantity: 1,
       datePurchased: "",
       dateExpire: "",
-      openExpiryDays: "", // ✅ keep "" for optional field
+      openExpiryDays: "",
       price: 0,
       description: "",
     },
@@ -121,26 +110,9 @@ export default function AddProductDrawer({
     });
   }
 
-  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > MAX_FILE_SIZE) {
-      toast.error("Image must be under 2 MB.");
-      return;
-    }
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file.");
-      return;
-    }
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
-  }
-
   function handleClose() {
     form.reset();
     setShowScanner(false);
-    setImageFile(null);
-    setImagePreview(null);
     onOpenChange(false);
   }
 
@@ -148,13 +120,7 @@ export default function AddProductDrawer({
     toast("Product added!", {
       description: (
         <pre className="mt-2 max-w-xs overflow-x-auto rounded-md bg-gray-900 p-3 text-xs text-green-300">
-          <code>
-            {JSON.stringify(
-              { ...data, image: imageFile?.name ?? null },
-              null,
-              2,
-            )}
-          </code>
+          <code>{JSON.stringify(data, null, 2)}</code>
         </pre>
       ),
       position: "bottom-right",
@@ -171,10 +137,7 @@ export default function AddProductDrawer({
       >
         {/* Header */}
         <SheetHeader className="shrink-0 flex flex-row items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
-          <SheetTitle
-            className="text-lg font-bold"
-            style={{ color: "#1A3340" }}
-          >
+          <SheetTitle className="text-lg font-bold" style={{ color: "#1A3340" }}>
             Add New Item
           </SheetTitle>
         </SheetHeader>
@@ -183,6 +146,7 @@ export default function AddProductDrawer({
         <div className="flex-1 overflow-y-auto px-6 py-5">
           <form id="add-product-form" onSubmit={form.handleSubmit(onSubmit)}>
             <FieldGroup>
+
               {/* Row 1: Category + Item Name */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Controller
@@ -190,17 +154,10 @@ export default function AddProductDrawer({
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel
-                        htmlFor="cat-type"
-                        className={labelCls}
-                        style={labelStyle}
-                      >
+                      <FieldLabel htmlFor="cat-type" className={labelCls} style={labelStyle}>
                         Category Type <span className="text-red-500">*</span>
                       </FieldLabel>
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                      >
+                      <Select value={field.value} onValueChange={field.onChange}>
                         <SelectTrigger
                           id="cat-type"
                           aria-invalid={fieldState.invalid}
@@ -210,15 +167,11 @@ export default function AddProductDrawer({
                         </SelectTrigger>
                         <SelectContent>
                           {CATEGORIES.map((c) => (
-                            <SelectItem key={c} value={c}>
-                              {c}
-                            </SelectItem>
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
+                      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                     </Field>
                   )}
                 />
@@ -227,11 +180,7 @@ export default function AddProductDrawer({
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel
-                        htmlFor="item-name"
-                        className={labelCls}
-                        style={labelStyle}
-                      >
+                      <FieldLabel htmlFor="item-name" className={labelCls} style={labelStyle}>
                         Item Name <span className="text-red-500">*</span>
                       </FieldLabel>
                       <Input
@@ -241,9 +190,7 @@ export default function AddProductDrawer({
                         aria-invalid={fieldState.invalid}
                         className={inputCls}
                       />
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
+                      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                     </Field>
                   )}
                 />
@@ -256,19 +203,15 @@ export default function AddProductDrawer({
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel
-                        htmlFor="barcode"
-                        className={labelCls}
-                        style={labelStyle}
-                      >
-                        Barcode / Image
+                      <FieldLabel htmlFor="barcode" className={labelCls} style={labelStyle}>
+                        Barcode
                       </FieldLabel>
                       <div className="flex flex-col gap-2">
                         <div className="relative">
                           <Input
                             {...field}
                             id="barcode"
-                            placeholder="Scan Barcode"
+                            placeholder="Scan or enter barcode"
                             className={`${inputCls} pr-10`}
                           />
                           <button
@@ -280,65 +223,10 @@ export default function AddProductDrawer({
                             <ScanLine size={17} style={{ color: "#3A7326" }} />
                           </button>
                         </div>
-                        {/* Image upload */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50"
-                            style={{ borderColor: "#D4EAC8", color: "#3A7326" }}
-                          >
-                            <Upload size={12} /> Upload Image
-                          </button>
-                          {imageFile && (
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              {imagePreview ? (
-                                <Image
-                                  src={imagePreview}
-                                  alt="preview"
-                                  width={28}
-                                  height={28}
-                                  className="w-7 h-7 rounded object-cover border border-gray-200"
-                                />
-                              ) : (
-                                <ImageIcon
-                                  size={16}
-                                  className="text-gray-400"
-                                />
-                              )}
-                              <span className="text-xs text-gray-500 truncate max-w-22.5">
-                                {imageFile.name}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setImageFile(null);
-                                  setImagePreview(null);
-                                }}
-                                aria-label="Remove image"
-                                className="text-gray-400 hover:text-red-400"
-                              >
-                                <X size={12} />
-                              </button>
-                            </div>
-                          )}
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleImageUpload}
-                            aria-label="Upload product image"
-                          />
-                        </div>
-                        {/* Inline scanner */}
                         {showScanner && (
                           <div
                             className="rounded-2xl p-3 mt-1"
-                            style={{
-                              backgroundColor: "#F8FDF6",
-                              border: "1px solid #D4EAC8",
-                            }}
+                            style={{ backgroundColor: "#F8FDF6", border: "1px solid #D4EAC8" }}
                           >
                             <BarcodeScanner
                               onDetected={handleBarcodeDetected}
@@ -347,9 +235,7 @@ export default function AddProductDrawer({
                           </div>
                         )}
                       </div>
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
+                      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                     </Field>
                   )}
                 />
@@ -358,11 +244,7 @@ export default function AddProductDrawer({
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel
-                        htmlFor="qty"
-                        className={labelCls}
-                        style={labelStyle}
-                      >
+                      <FieldLabel htmlFor="qty" className={labelCls} style={labelStyle}>
                         Item Quantity <span className="text-red-500">*</span>
                       </FieldLabel>
                       <Input
@@ -375,9 +257,7 @@ export default function AddProductDrawer({
                         className={inputCls}
                         value={field.value ?? ""}
                       />
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
+                      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                     </Field>
                   )}
                 />
@@ -390,13 +270,8 @@ export default function AddProductDrawer({
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel
-                        htmlFor="date-purchased"
-                        className={labelCls}
-                        style={labelStyle}
-                      >
-                        Date of Purchased{" "}
-                        <span className="text-red-500">*</span>
+                      <FieldLabel htmlFor="date-purchased" className={labelCls} style={labelStyle}>
+                        Date of Purchased <span className="text-red-500">*</span>
                       </FieldLabel>
                       <Input
                         {...field}
@@ -405,9 +280,7 @@ export default function AddProductDrawer({
                         aria-invalid={fieldState.invalid}
                         className={inputCls}
                       />
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
+                      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                     </Field>
                   )}
                 />
@@ -416,11 +289,7 @@ export default function AddProductDrawer({
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel
-                        htmlFor="date-expire"
-                        className={labelCls}
-                        style={labelStyle}
-                      >
+                      <FieldLabel htmlFor="date-expire" className={labelCls} style={labelStyle}>
                         Date of Expire <span className="text-red-500">*</span>
                       </FieldLabel>
                       <Input
@@ -430,26 +299,20 @@ export default function AddProductDrawer({
                         aria-invalid={fieldState.invalid}
                         className={inputCls}
                       />
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
+                      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                     </Field>
                   )}
                 />
               </div>
 
-              {/* Row 4: Open Expiry + Store Name */}
+              {/* Row 4: Open Expiry + Price */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Controller
                   name="openExpiryDays"
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel
-                        htmlFor="open-expiry"
-                        className={labelCls}
-                        style={labelStyle}
-                      >
+                      <FieldLabel htmlFor="open-expiry" className={labelCls} style={labelStyle}>
                         Date of Open Expiry
                       </FieldLabel>
                       <div className="relative">
@@ -469,9 +332,7 @@ export default function AddProductDrawer({
                           Days
                         </span>
                       </div>
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
+                      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                     </Field>
                   )}
                 />
@@ -480,11 +341,7 @@ export default function AddProductDrawer({
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel
-                        htmlFor="price"
-                        className={labelCls}
-                        style={labelStyle}
-                      >
+                      <FieldLabel htmlFor="price" className={labelCls} style={labelStyle}>
                         Price <span className="text-red-500">*</span>
                       </FieldLabel>
                       <div className="relative">
@@ -503,25 +360,19 @@ export default function AddProductDrawer({
                           value={field.value ?? ""}
                         />
                       </div>
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
+                      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                     </Field>
                   )}
                 />
               </div>
 
-              {/* Row 6: Description */}
+              {/* Row 5: Description */}
               <Controller
                 name="description"
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel
-                      htmlFor="description"
-                      className={labelCls}
-                      style={labelStyle}
-                    >
+                    <FieldLabel htmlFor="description" className={labelCls} style={labelStyle}>
                       Description
                     </FieldLabel>
                     <textarea
@@ -546,6 +397,7 @@ export default function AddProductDrawer({
                   </Field>
                 )}
               />
+
             </FieldGroup>
           </form>
         </div>

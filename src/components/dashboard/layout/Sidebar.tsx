@@ -3,6 +3,7 @@ import { LogOut } from "lucide-react";
 import SidebarNavLinks from "./Sidebarnavlinks";
 import AddProductCard from "./Addproductcard";
 import ExpiroLogo from "@/components/elements/Logo";
+import SellProductCard from "./SellProductCard";
 
 export default function Sidebar() {
   return (
@@ -21,6 +22,9 @@ export default function Sidebar() {
       {/* ── Add Product card (client — opens drawer) ── */}
       <div className="my-4 shrink-0">
         <AddProductCard />
+      </div>
+      <div className="my-4 shrink-0">
+        <SellProductCard />
       </div>
 
       {/* ── Logout ── */}
