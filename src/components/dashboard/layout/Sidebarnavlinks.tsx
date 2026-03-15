@@ -29,10 +29,16 @@ const navItems: NavItem[] = [
   { label: "Products", icon: Package, href: "/dashboard/products" },
   { label: "Alerts", icon: Bell, href: "/dashboard/alerts", badge: 1 },
   { label: "Staff", icon: Users, href: "/dashboard/staff" },
-  { label: "DLC Trust", icon: Shield, href: "/dashboard/dlc-trust" },
   { label: "DLC Track", icon: Users, href: "/dashboard/dlc-track" },
   { label: "Category", icon: Tag, href: "/dashboard/category" },
   { label: "Settings", icon: Settings, href: "/dashboard/settings" },
+];
+const navItemsStaff: NavItem[] = [
+  { label: "Home", icon: LayoutDashboard, href: "/staff/dashboard", exact: true },
+  { label: "Products", icon: Package, href: "/staff/dashboard/products" },
+  { label: "Alerts", icon: Bell, href: "/staff/dashboard/alerts", badge: 1 },
+  { label: "DLC Trust", icon: Shield, href: "/staff/dashboard/dlc-trust" },
+  { label: "Settings", icon: Settings, href: "/staff/dashboard/settings" },
 ];
 
 const superAdminNav: NavItem[] = [
@@ -50,10 +56,12 @@ export default function SidebarNavLinks() {
   const pathname = usePathname();
 
   const currentNavItems = pathname.startsWith("/admin")
-    ? superAdminNav
-    : pathname.startsWith("/dashboard")
-    ? navItems
-    : [];
+  ? superAdminNav
+  : pathname.startsWith("/staff")
+  ? navItemsStaff
+  : pathname.startsWith("/dashboard")
+  ? navItems
+  : [];
 
   return (
     <nav

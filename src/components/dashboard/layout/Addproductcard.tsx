@@ -7,22 +7,23 @@ import { usePathname } from "next/navigation";
 
 export default function AddProductCard() {
   const [open, setOpen] = useState(false);
- const pathName = usePathname()
- const isSuperAdmin = pathName.startsWith("/admin")
+  const pathName = usePathname();
+  const isSuperAdmin = pathName.startsWith("/admin");
+
   return (
     <>
       <div
-        className={`relative rounded-2xl p-4 overflow-hidden ${isSuperAdmin ? "hidden":""}`}
+        className={`relative overflow-hidden rounded-xl p-3 sm:rounded-2xl sm:p-4 ${
+          isSuperAdmin ? "hidden" : ""
+        }`}
         style={{ backgroundColor: "#3A7326" }}
       >
-        {/* NEW badge */}
         <span
-          className="absolute top-3 right-3 text-[10px] font-extrabold px-2 py-0.5 rounded italic tracking-wide select-none"
+          className="absolute right-2 top-2 inline-block select-none rounded px-1.5 py-0.5 text-[9px] font-extrabold italic tracking-wide sm:right-3 sm:top-3 sm:px-2 sm:text-[10px]"
           style={{
             backgroundColor: "rgba(255,255,255,0.15)",
             color: "white",
             border: "1.5px solid rgba(255,255,255,0.3)",
-            display: "inline-block",
             transform: "rotate(6deg)",
           }}
           aria-label="New feature"
@@ -30,13 +31,16 @@ export default function AddProductCard() {
           NEW
         </span>
 
-        <p className="text-xs leading-relaxed mb-4 pr-8" style={{ color: "rgba(255,255,255,0.85)" }}>
+        <p
+          className="mb-3 pr-7 text-[11px] leading-relaxed sm:mb-4 sm:pr-8 sm:text-xs"
+          style={{ color: "rgba(255,255,255,0.85)" }}
+        >
           Please, organize your menus through button below!
         </p>
 
         <button
           onClick={() => setOpen(true)}
-          className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors hover:opacity-90 w-full justify-center"
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-colors hover:opacity-90 sm:gap-2 sm:rounded-xl sm:px-4 sm:text-sm"
           style={{
             backgroundColor: "rgba(255,255,255,0.15)",
             color: "white",
@@ -44,7 +48,11 @@ export default function AddProductCard() {
           }}
           aria-label="Open Add Product drawer"
         >
-          <Plus size={15} aria-hidden="true" />
+          <Plus
+            size={14}
+            aria-hidden="true"
+            className="sm:h-3.75 sm:w-3.75"
+          />
           Add Product
         </button>
       </div>

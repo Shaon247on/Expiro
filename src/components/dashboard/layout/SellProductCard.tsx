@@ -8,20 +8,17 @@ import BarcodeScanModal from "./BarcodeScanModal";
 import SellProductDrawer from "./SellProductDrawer";
 
 export default function SellProductCard() {
-  const pathname     = usePathname();
+  const pathname = usePathname();
   const isSuperAdmin = pathname.startsWith("/admin");
 
-  // Camera modal state
-  const [scanOpen, setScanOpen]         = useState(false);
-  // Drawer state — opens after a successful scan
-  const [drawerOpen, setDrawerOpen]     = useState(false);
-  const [scannedCode, setScannedCode]   = useState<string | null>(null);
+  const [scanOpen, setScanOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [scannedCode, setScannedCode] = useState<string | null>(null);
 
-  /** Called by BarcodeScanModal once a code is detected */
   const handleDetected = useCallback((code: string) => {
-    setScanOpen(false);       // close camera
-    setScannedCode(code);     // pass code to drawer
-    setDrawerOpen(true);      // open drawer immediately
+    setScanOpen(false);
+    setScannedCode(code);
+    setDrawerOpen(true);
     toast.success("Barcode scanned!", {
       description: `Code: ${code}`,
       position: "bottom-right",
@@ -35,19 +32,18 @@ export default function SellProductCard() {
 
   return (
     <>
-      {/* ── Card ── */}
       <div
-        className={`relative rounded-2xl p-4 overflow-hidden ${isSuperAdmin ? "hidden" : ""}`}
+        className={`relative overflow-hidden rounded-xl p-3 sm:rounded-2xl sm:p-4 ${
+          isSuperAdmin ? "hidden" : ""
+        }`}
         style={{ backgroundColor: "#6D28D9" }}
       >
-        {/* SELL badge */}
         <span
-          className="absolute top-3 right-3 text-[10px] font-extrabold px-2 py-0.5 rounded italic tracking-wide select-none"
+          className="absolute right-2 top-2 inline-block select-none rounded px-1.5 py-0.5 text-[9px] font-extrabold italic tracking-wide sm:right-3 sm:top-3 sm:px-2 sm:text-[10px]"
           style={{
             backgroundColor: "rgba(255,255,255,0.15)",
             color: "white",
             border: "1.5px solid rgba(255,255,255,0.3)",
-            display: "inline-block",
             transform: "rotate(6deg)",
           }}
           aria-label="Sell feature"
@@ -56,7 +52,7 @@ export default function SellProductCard() {
         </span>
 
         <p
-          className="text-xs leading-relaxed mb-4 pr-8"
+          className="mb-3 pr-7 text-[11px] leading-relaxed sm:mb-4 sm:pr-8 sm:text-xs"
           style={{ color: "rgba(255,255,255,0.85)" }}
         >
           Scan a product barcode with your camera to select a batch and sell.
@@ -64,7 +60,7 @@ export default function SellProductCard() {
 
         <button
           onClick={() => setScanOpen(true)}
-          className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all hover:opacity-90 active:scale-95 w-full justify-center"
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-all hover:opacity-90 active:scale-95 sm:gap-2 sm:rounded-xl sm:px-4 sm:text-sm"
           style={{
             backgroundColor: "rgba(255,255,255,0.15)",
             color: "white",
@@ -72,23 +68,21 @@ export default function SellProductCard() {
           }}
           aria-label="Open barcode scanner to sell product"
         >
-          <ShoppingCart size={15} aria-hidden="true" />
+          <ShoppingCart size={14} aria-hidden="true" className="sm:h-3.75 sm:w-3.75" />
           Sell Product
         </button>
       </div>
 
-      {/* ── Fullscreen camera modal ── */}
       <BarcodeScanModal
         open={scanOpen}
         onDetected={handleDetected}
         onClose={() => setScanOpen(false)}
       />
 
-      {/* ── Product + batch drawer (opens after scan) ── */}
       <SellProductDrawer
         open={drawerOpen}
         scannedCode={scannedCode}
-        onOpenChange={(open) => !open && handleDrawerClose()}
+        onOpenChange={(open: boolean) => !open && handleDrawerClose()}
       />
     </>
   );

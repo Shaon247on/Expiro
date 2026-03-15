@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Image from "next/image";
-import { Eye, PackageOpen, Search } from "lucide-react";
+import { Eye, PackageOpen, Search, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ import {
 import {
   MOCK_OPENED_ITEMS, computeStatus, daysLeftLabel,
   statusMeta, type OpenedItem, type ProductStatus,
-} from "@/types/OpenedItems.type";
+} from "@/types/openedItems.type";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
