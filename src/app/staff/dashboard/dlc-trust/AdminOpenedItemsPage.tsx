@@ -16,7 +16,7 @@ import {
 import {
   MOCK_OPENED_ITEMS, computeStatus, daysLeftLabel,
   statusMeta, type OpenedItem, type ProductStatus,
-} from "@/types/openedItems.type";
+} from "@/types/OpenedItems.type";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
