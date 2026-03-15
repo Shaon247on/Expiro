@@ -10,6 +10,7 @@ import {
   Settings,
   User,
   Tag,
+  Shield,
 } from "lucide-react";
 
 interface NavItem {
@@ -28,6 +29,8 @@ const navItems: NavItem[] = [
   { label: "Products", icon: Package, href: "/dashboard/products" },
   { label: "Alerts", icon: Bell, href: "/dashboard/alerts", badge: 1 },
   { label: "Staff", icon: Users, href: "/dashboard/staff" },
+  { label: "DLC Trust", icon: Shield, href: "/dashboard/dlc-trust" },
+  { label: "DLC Track", icon: Users, href: "/dashboard/dlc-track" },
   { label: "Category", icon: Tag, href: "/dashboard/category" },
   { label: "Settings", icon: Settings, href: "/dashboard/settings" },
 ];
