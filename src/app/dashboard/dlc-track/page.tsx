@@ -1,4 +1,4 @@
-import AdminOpenedItemsPage from '@/app/staff/dashboard/dlc-trust/AdminOpenedItemsPage'
+import AdminOpenedItemsPage from '@/components/dashboard/dlcTrust/AdminOpenedItemsPage'
 import React from 'react'
 
 function page() {
