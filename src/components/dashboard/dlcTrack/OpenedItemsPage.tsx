@@ -1,21 +1,33 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import Image from "next/image";
-import { ScanLine, Eye, PackageOpen, Camera, X, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
+import { Eye, PackageOpen, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 
-import CameraCapture from "./CameraCapture";
+import ScanAndCaptureModal, { type LookupResult } from "./ScanAndCaptureModal";
 import {
   MOCK_OPENED_ITEMS, computeStatus, daysLeftLabel,
   statusMeta, type OpenedItem, type ProductStatus,
 } from "@/types/OpenedItems.type";
+
+// ── Mock DB ────────────────────────────────────────────────────────────────────
+
+const PRODUCT_DB: Record<string, LookupResult> = {
+  "5901234123457": { itemName: "Organic Whole Milk", category: "Dairy",     expiryDate: new Date(Date.now() + 5  * 86400000).toISOString().split("T")[0], openExpiryDays: 7,  barcode: "5901234123457" },
+  "4006381333931": { itemName: "Sourdough Bread",    category: "Bakery",    expiryDate: new Date(Date.now() + 3  * 86400000).toISOString().split("T")[0], openExpiryDays: 3,  barcode: "4006381333931" },
+  "7613035898226": { itemName: "Orange Juice",       category: "Beverages", expiryDate: new Date(Date.now() + 20 * 86400000).toISOString().split("T")[0], openExpiryDays: 14, barcode: "7613035898226" },
+};
+
+async function lookupProduct(barcode: string): Promise<LookupResult | null> {
+  await new Promise((r) => setTimeout(r, 500));
+  return PRODUCT_DB[barcode] ?? null;
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -30,27 +42,6 @@ function formatDate(iso: string) {
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit", month: "short", year: "numeric",
   }).format(new Date(iso));
-}
-
-// ── Mock product lookup ────────────────────────────────────────────────────────
-
-interface LookupResult {
-  itemName: string;
-  category: string;
-  expiryDate: string;
-  openExpiryDays: number;
-  barcode: string;
-}
-
-const PRODUCT_DB: Record<string, LookupResult> = {
-  "5901234123457": { itemName: "Organic Whole Milk", category: "Dairy",     expiryDate: new Date(Date.now() + 5  * 86400000).toISOString().split("T")[0], openExpiryDays: 7,  barcode: "5901234123457" },
-  "4006381333931": { itemName: "Sourdough Bread",    category: "Bakery",    expiryDate: new Date(Date.now() + 3  * 86400000).toISOString().split("T")[0], openExpiryDays: 3,  barcode: "4006381333931" },
-  "7613035898226": { itemName: "Orange Juice",       category: "Beverages", expiryDate: new Date(Date.now() + 20 * 86400000).toISOString().split("T")[0], openExpiryDays: 14, barcode: "7613035898226" },
-};
-
-async function lookupProduct(barcode: string): Promise<LookupResult | null> {
-  await new Promise((r) => setTimeout(r, 500));
-  return PRODUCT_DB[barcode] ?? null;
 }
 
 // ── StatusBadge ────────────────────────────────────────────────────────────────
@@ -97,20 +88,17 @@ function ItemDetailDialog({ item, onClose }: { item: OpenedItem; onClose: () => 
             </div>
           </div>
 
-          {/* Info rows */}
           <div className="space-y-3">
             {[
-              { label: "Opened",        value: formatDateTime(item.openedAt) },
-              { label: "Expiry Date",   value: formatDate(item.expiryDate)   },
-              { label: "Open Valid For", value: `${item.openExpiryDays} days` },
+              { label: "Opened",         value: formatDateTime(item.openedAt)     },
+              { label: "Expiry Date",    value: formatDate(item.expiryDate)       },
+              { label: "Open Valid For", value: `${item.openExpiryDays} days`     },
             ].map(({ label, value }) => (
               <div key={label} className="flex items-center justify-between text-[13px]">
                 <span className="text-gray-500 font-medium">{label}</span>
                 <span className="font-bold" style={{ color: "#1A3340" }}>{value}</span>
               </div>
             ))}
-
-            {/* Days left */}
             <div className="flex items-center justify-between text-[13px]">
               <span className="text-gray-500 font-medium">Days Left</span>
               <span className="font-bold text-[14px]"
@@ -118,7 +106,6 @@ function ItemDetailDialog({ item, onClose }: { item: OpenedItem; onClose: () => 
                 {days < 0 ? "Expired" : `${days} days`}
               </span>
             </div>
-
             <div className="flex items-center justify-between">
               <span className="text-gray-500 font-medium text-[13px]">Status</span>
               <StatusBadge status={status} />
@@ -130,184 +117,70 @@ function ItemDetailDialog({ item, onClose }: { item: OpenedItem; onClose: () => 
   );
 }
 
-// ── Scan + Capture Flow ────────────────────────────────────────────────────────
-
-type FlowStep = "idle" | "looking" | "not_found" | "capture" | "confirming";
-
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function OpenedItemsPage() {
-  const [items, setItems]             = useState<OpenedItem[]>(MOCK_OPENED_ITEMS);
-  const [viewItem, setViewItem]       = useState<OpenedItem | null>(null);
+  const [items, setItems]       = useState<OpenedItem[]>(MOCK_OPENED_ITEMS);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [viewItem, setViewItem] = useState<OpenedItem | null>(null);
 
-  // Scan flow
-  const [barcode, setBarcode]         = useState("");
-  const [flowStep, setFlowStep]       = useState<FlowStep>("idle");
-  const [foundProduct, setFoundProduct] = useState<LookupResult | null>(null);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [cameraOpen, setCameraOpen]   = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const resetFlow = useCallback(() => {
-    setFlowStep("idle");
-    setBarcode("");
-    setFoundProduct(null);
-    setCapturedImage(null);
-    setCameraOpen(false);
-  }, []);
-
-  async function handleLookup(code: string) {
-    const trimmed = code.trim();
-    if (!trimmed) return;
-    setFlowStep("looking");
-    const found = await lookupProduct(trimmed);
-    if (found) {
-      setFoundProduct(found);
-      setFlowStep("capture");
-      setCameraOpen(true);
-    } else {
-      setFlowStep("not_found");
-    }
-  }
-
-  function handleCaptured(dataUrl: string) {
-    setCameraOpen(false);
-    setCapturedImage(dataUrl);
-    setFlowStep("confirming");
-  }
-
-  function handleConfirmOpen() {
-    if (!foundProduct || !capturedImage) return;
-    const now = new Date().toISOString();
-    const status = computeStatus(foundProduct.expiryDate, now, foundProduct.openExpiryDays);
+  /** Called by ScanAndCaptureModal once photo is confirmed */
+  const handleComplete = useCallback((imageDataUrl: string, product: LookupResult) => {
+    const now    = new Date().toISOString();
+    const status = computeStatus(product.expiryDate, now, product.openExpiryDays);
     const newItem: OpenedItem = {
-      id:            `oi-${Date.now()}`,
-      barcode:       foundProduct.barcode,
-      itemName:      foundProduct.itemName,
-      category:      foundProduct.category,
-      imageUrl:      capturedImage,
-      openedAt:      now,
-      expiryDate:    foundProduct.expiryDate,
-      openExpiryDays: foundProduct.openExpiryDays,
+      id:             `oi-${Date.now()}`,
+      barcode:        product.barcode,
+      itemName:       product.itemName,
+      category:       product.category,
+      imageUrl:       imageDataUrl,
+      openedAt:       now,
+      expiryDate:     product.expiryDate,
+      openExpiryDays: product.openExpiryDays,
       status,
       openedBy: { id: "me", name: "You", email: "user@store.com", avatarInitials: "ME", avatarBg: "#EEF3EA" },
     };
     setItems((prev) => [newItem, ...prev]);
-    toast.success(`"${foundProduct.itemName}" marked as opened.`, { position: "bottom-right" });
-    resetFlow();
-  }
-
-  const isLoading = flowStep === "looking";
+    toast.success(`"${product.itemName}" marked as opened.`, { position: "bottom-right" });
+  }, []);
 
   return (
     <div className="flex flex-col gap-6">
 
       {/* ── Page header ── */}
       <div className="flex items-center gap-4 p-5 rounded-2xl bg-white border border-gray-100 shadow-sm">
-        <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: "#EEF3EA" }}>
+        <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+          style={{ backgroundColor: "#EEF3EA" }}>
           <PackageOpen size={22} style={{ color: "#3A7326" }} />
         </div>
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold" style={{ color: "#1A3340" }}>Opened Items</h1>
           <p className="text-sm" style={{ color: "#51564E" }}>{items.length} items currently open</p>
         </div>
-      </div>
-
-      {/* ── Scan / input bar ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-        <p className="text-[13px] font-semibold" style={{ color: "#1A3340" }}>
-          Mark a product as opened
-        </p>
-
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Input
-              ref={inputRef}
-              value={barcode}
-              onChange={(e) => { setBarcode(e.target.value); if (flowStep === "not_found") setFlowStep("idle"); }}
-              onKeyDown={(e) => e.key === "Enter" && handleLookup(barcode)}
-              placeholder="Enter or scan barcode…"
-              disabled={isLoading}
-              className="h-11 rounded-xl border-gray-200 text-sm pr-10 focus:ring-2 focus:ring-green-300 focus:border-green-400"
-            />
-            <ScanLine size={17} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "#3A7326" }} />
-          </div>
-          <Button
-            onClick={() => handleLookup(barcode)}
-            disabled={!barcode.trim() || isLoading}
-            className="h-11 px-5 rounded-xl text-sm font-semibold border-0 disabled:opacity-50"
-            style={{ backgroundColor: "#3A7326", color: "white" }}
-          >
-            {isLoading ? <Loader2 size={16} className="animate-spin" /> : "Look Up"}
-          </Button>
-        </div>
-
-        {/* Not found */}
-        {flowStep === "not_found" && (
-          <div className="flex items-center gap-2.5 rounded-xl px-4 py-3 text-[13px]"
-            style={{ backgroundColor: "#FFF1F2", color: "#E11D48", border: "1px solid #FECDD3" }}>
-            <AlertTriangle size={15} className="shrink-0" />
-            No product found for <strong className="ml-0.5">"{barcode}"</strong>.
-            <button onClick={resetFlow} className="ml-auto shrink-0"><X size={14} /></button>
-          </div>
-        )}
-
-        {/* Confirming photo */}
-        {flowStep === "confirming" && foundProduct && capturedImage && (
-          <div className="rounded-2xl overflow-hidden border" style={{ borderColor: "#D4EAC8" }}>
-            <div className="px-4 py-3 flex items-center gap-2" style={{ backgroundColor: "#EEF3EA" }}>
-              <CheckCircle2 size={16} style={{ color: "#3A7326" }} />
-              <span className="text-[13px] font-semibold" style={{ color: "#1A3340" }}>
-                {foundProduct.itemName}
-              </span>
-              <span className="text-[11px] text-gray-500 ml-1">· {foundProduct.category}</span>
-            </div>
-            <div className="p-4 flex flex-col sm:flex-row gap-4 items-start">
-              {/* Captured photo preview */}
-              <div className="relative w-full sm:w-32 h-32 rounded-xl overflow-hidden shrink-0 border border-gray-100">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={capturedImage} alt="Captured" className="w-full h-full object-cover" />
-              </div>
-              <div className="flex-1 space-y-2.5 min-w-0">
-                {[
-                  { label: "Expiry Date",    value: formatDate(foundProduct.expiryDate) },
-                  { label: "Open Valid For", value: `${foundProduct.openExpiryDays} days after opening` },
-                  { label: "Opening Time",   value: formatDateTime(new Date().toISOString()) },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex items-center justify-between text-[12px]">
-                    <span className="text-gray-500">{label}</span>
-                    <span className="font-semibold" style={{ color: "#1A3340" }}>{value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="px-4 pb-4 flex gap-2">
-              <Button variant="outline" onClick={() => { setCapturedImage(null); setCameraOpen(true); setFlowStep("capture"); }}
-                className="flex-1 h-10 rounded-xl text-[13px] font-semibold"
-                style={{ borderColor: "#D4EAC8", color: "#3A7326" }}>
-                <Camera size={14} className="mr-1.5" /> Retake
-              </Button>
-              <Button onClick={handleConfirmOpen}
-                className="flex-1 h-10 rounded-xl text-[13px] font-semibold border-0"
-                style={{ backgroundColor: "#3A7326", color: "white" }}>
-                <CheckCircle2 size={14} className="mr-1.5" /> Confirm Open
-              </Button>
-            </div>
-          </div>
-        )}
+        <Button
+          onClick={() => setModalOpen(true)}
+          className="flex items-center gap-2 h-10 px-5 rounded-xl text-sm font-semibold border-0 shrink-0"
+          style={{ backgroundColor: "#3A7326", color: "white" }}
+        >
+          <ScanLine size={15} />
+          <span className="hidden sm:inline">Scan Product</span>
+          <span className="sm:hidden">Scan</span>
+        </Button>
       </div>
 
       {/* ── Table ── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
-        {/* Desktop table */}
+        {/* Desktop */}
         <div className="hidden sm:block overflow-x-auto">
-          <table className="w-full min-w-[640px]">
+          <table className="w-full min-w-[600px]">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/80">
                 {["No.", "Item", "Category", "Status", "Days Left", "Action"].map((col, i) => (
                   <th key={col}
-                    className={`text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-5 py-3.5 ${i === 5 ? "text-right" : i === 0 ? "text-center w-14" : "text-left"}`}>
+                    className={`text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-5 py-3.5 ${
+                      i === 5 ? "text-right" : i === 0 ? "text-center w-14" : "text-left"
+                    }`}>
                     {col}
                   </th>
                 ))}
@@ -318,7 +191,7 @@ export default function OpenedItemsPage() {
                 <tr>
                   <td colSpan={6} className="py-16 text-center">
                     <PackageOpen size={36} className="mx-auto mb-3 opacity-20" />
-                    <p className="text-sm text-gray-400">No opened items yet.</p>
+                    <p className="text-sm text-gray-400">No opened items yet. Tap Scan Product to begin.</p>
                   </td>
                 </tr>
               ) : items.map((item, idx) => {
@@ -364,9 +237,14 @@ export default function OpenedItemsPage() {
         {/* Mobile cards */}
         <div className="sm:hidden divide-y divide-gray-50">
           {items.length === 0 && (
-            <div className="py-16 text-center">
+            <div className="py-16 text-center px-6">
               <PackageOpen size={36} className="mx-auto mb-3 opacity-20" />
               <p className="text-sm text-gray-400">No opened items yet.</p>
+              <button onClick={() => setModalOpen(true)}
+                className="mt-4 px-5 py-2 rounded-xl text-sm font-semibold"
+                style={{ backgroundColor: "#EEF3EA", color: "#3A7326" }}>
+                Scan a product
+              </button>
             </div>
           )}
           {items.map((item, idx) => {
@@ -401,11 +279,12 @@ export default function OpenedItemsPage() {
         </div>
       </div>
 
-      {/* Camera capture */}
-      <CameraCapture
-        open={cameraOpen}
-        onCapture={handleCaptured}
-        onClose={() => { setCameraOpen(false); resetFlow(); }}
+      {/* Unified scan + capture modal */}
+      <ScanAndCaptureModal
+        open={modalOpen}
+        onComplete={handleComplete}
+        onClose={() => setModalOpen(false)}
+        lookupProduct={lookupProduct}
       />
 
       {/* Detail dialog */}
