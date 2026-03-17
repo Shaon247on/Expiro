@@ -123,14 +123,14 @@ function ImageUploadField({ value, onChange }: ImageUploadProps) {
               </button>
             </div>
             {/* Always-visible remove button */}
-            <button
+            {/* <button
               type="button"
               onClick={handleRemove}
               className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center text-red-500 hover:bg-red-50 transition-colors"
               aria-label="Remove image"
             >
               <X size={13} />
-            </button>
+            </button> */}
           </>
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-2 px-4 text-center">
@@ -213,14 +213,14 @@ export default function AddCategoryDialog({ onSuccess }: AddCategoryDialogProps)
             <DialogTitle className="text-base font-bold" style={{ color: "#1A3340" }}>
               Add Category
             </DialogTitle>
-            <button
+            {/* <button
               onClick={handleClose}
               disabled={loading}
               className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors disabled:opacity-50"
               aria-label="Close"
             >
               <X size={18} className="text-gray-500" />
-            </button>
+            </button> */}
           </div>
 
           {/* Body */}

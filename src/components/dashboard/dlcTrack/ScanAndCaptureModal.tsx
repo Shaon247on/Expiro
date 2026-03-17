@@ -5,7 +5,7 @@ import {
 } from "react";
 import {
   X, ScanLine, Camera, Loader2, AlertTriangle,
-  RefreshCw, CheckCircle2,
+  RefreshCw, CheckCircle2, Images,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -21,42 +21,51 @@ export interface LookupResult {
 
 interface ScanAndCaptureModalProps {
   open: boolean;
-  /** Called with the captured image data-URL + the looked-up product */
   onComplete: (imageDataUrl: string, product: LookupResult) => void;
   onClose: () => void;
-  lookupProduct: (barcode: string) => Promise<LookupResult | null>;
+  lookupProduct?: (barcode: string) => Promise<LookupResult | null>;
 }
 
 // ── Internal phases ────────────────────────────────────────────────────────────
 
 type Phase =
-  | "scan_starting"   // camera initialising for barcode scan
-  | "scan_live"       // barcode scanner active
-  | "scan_manual"     // manual barcode input shown
-  | "scan_looking"    // product API lookup in progress
-  | "scan_not_found"  // barcode not in DB
-  | "photo_starting"  // camera reinitialising for photo
-  | "photo_live"      // photo camera active
-  | "photo_preview"   // show captured image, user confirms
-  | "submitting"      // saving
-  | "cam_error";      // camera permission denied
+  | "scan_starting"
+  | "scan_live"
+  | "scan_manual"
+  | "scan_looking"
+  | "scan_not_found"
+  | "photo_starting"
+  | "photo_live"
+  | "photo_preview"
+  | "submitting"
+  | "cam_error";
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function ScanAndCaptureModal({
   open, onComplete, onClose, lookupProduct,
 }: ScanAndCaptureModalProps) {
-  const videoRef   = useRef<HTMLVideoElement>(null);
-  const canvasRef  = useRef<HTMLCanvasElement>(null);
-  const streamRef  = useRef<MediaStream | null>(null);
-  const rafRef     = useRef<number>(0);
+  // Guard: if no lookup function is provided, treat every scan as not found
+  const doLookup = useCallback(
+    (barcode: string) =>
+      typeof lookupProduct === "function"
+        ? lookupProduct(barcode)
+        : Promise.resolve(null),
+    [lookupProduct]
+  );
+  const videoRef    = useRef<HTMLVideoElement>(null);
+  const canvasRef   = useRef<HTMLCanvasElement>(null);
+  const streamRef   = useRef<MediaStream | null>(null);
+  const rafRef      = useRef<number>(0);
   const detectedRef = useRef(false);
+  // Hidden file input for gallery selection
+  const galleryRef  = useRef<HTMLInputElement>(null);
 
-  const [phase, setPhase]           = useState<Phase>("scan_starting");
-  const [manualCode, setManualCode] = useState("");
-  const [errMsg, setErrMsg]         = useState("");
-  const [product, setProduct]       = useState<LookupResult | null>(null);
-  const [preview, setPreview]       = useState<string | null>(null);
+  const [phase,        setPhase]        = useState<Phase>("scan_starting");
+  const [manualCode,   setManualCode]   = useState("");
+  const [errMsg,       setErrMsg]       = useState("");
+  const [product,      setProduct]      = useState<LookupResult | null>(null);
+  const [preview,      setPreview]      = useState<string | null>(null);
   const [isNewPreview, setIsNewPreview] = useState(false);
 
   // ── Camera helpers ─────────────────────────────────────────────────────────
@@ -88,23 +97,20 @@ export default function ScanAndCaptureModal({
     }
   }, []);
 
-
-   const handleBarcodeScan = useCallback(async (code: string) => {
+  const handleBarcodeScan = useCallback(async (code: string) => {
     const trimmed = code.trim();
     if (!trimmed) return;
     setManualCode(trimmed);
     setPhase("scan_looking");
-    const found = await lookupProduct(trimmed);
+    const found = await doLookup(trimmed);
     if (found) {
       setProduct(found);
-      // Switch to photo capture
       setPhase("photo_starting");
       await startCamera("photo_live");
     } else {
       setPhase("scan_not_found");
     }
-  }, [lookupProduct, startCamera]);
-
+  }, [doLookup, startCamera]);
 
   // ── BarcodeDetector scanning loop ──────────────────────────────────────────
 
@@ -134,10 +140,6 @@ export default function ScanAndCaptureModal({
     rafRef.current = requestAnimationFrame(tick);
   }, [stopStream]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Barcode scan result → product lookup ───────────────────────────────────
-
- 
-  // Watch for phase transitions to kick off BarcodeDetector
   useEffect(() => {
     if (phase === "scan_live") startBarcodeDetection();
   }, [phase, startBarcodeDetection]);
@@ -158,7 +160,7 @@ export default function ScanAndCaptureModal({
     return () => stopStream();
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Photo capture ──────────────────────────────────────────────────────────
+  // ── Camera photo capture ───────────────────────────────────────────────────
 
   function handleCapture() {
     const video  = videoRef.current;
@@ -174,6 +176,29 @@ export default function ScanAndCaptureModal({
     setPhase("photo_preview");
   }
 
+  // ── Gallery / local file picker ────────────────────────────────────────────
+
+  function handleGalleryPick() {
+    galleryRef.current?.click();
+  }
+
+  function handleGalleryChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      stopStream();           // stop camera if active
+      setPreview(dataUrl);
+      setIsNewPreview(true);
+      setPhase("photo_preview");
+    };
+    reader.readAsDataURL(file);
+    // Reset so same file can be re-picked if needed
+    e.target.value = "";
+  }
+
   function handleRetakePhoto() {
     setPreview(null);
     setIsNewPreview(false);
@@ -181,12 +206,11 @@ export default function ScanAndCaptureModal({
     startCamera("photo_live");
   }
 
-  // ── Auto-submit on preview ─────────────────────────────────────────────────
+  // ── Submit ─────────────────────────────────────────────────────────────────
 
   function handleSubmit() {
     if (!product || !preview) return;
     setPhase("submitting");
-    // Small delay so user sees the submitting state
     setTimeout(() => {
       onComplete(preview, product);
       handleClose();
@@ -238,12 +262,22 @@ export default function ScanAndCaptureModal({
       aria-modal
       aria-label={headerTitle}
     >
+      {/* Hidden gallery file input — no `capture` attr so it opens the file picker / gallery */}
+      <input
+        ref={galleryRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleGalleryChange}
+        aria-label="Choose image from gallery"
+      />
+
       {/* Top bar */}
       <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
         <div className="flex items-center gap-2.5">
           <div
             className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-            style={{ backgroundColor: isScanPhase ? "rgba(58,115,38,0.3)" : "rgba(58,115,38,0.3)" }}
+            style={{ backgroundColor: "rgba(58,115,38,0.3)" }}
           >
             {isScanPhase
               ? <ScanLine size={16} style={{ color: "#86EFAC" }} />
@@ -258,7 +292,7 @@ export default function ScanAndCaptureModal({
           </div>
         </div>
 
-        {/* Step dots */}
+        {/* Step dots + close */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
             {[0, 1].map((i) => (
@@ -285,7 +319,6 @@ export default function ScanAndCaptureModal({
       {/* Viewport */}
       <div className="flex-1 relative overflow-hidden mx-4 rounded-3xl" style={{ maxHeight: "62vh" }}>
 
-        {/* Video element — always rendered, shown in live phases */}
         <video
           ref={videoRef}
           className="w-full h-full object-cover"
@@ -293,13 +326,13 @@ export default function ScanAndCaptureModal({
           playsInline muted autoPlay
         />
 
-        {/* Photo preview */}
+        {/* Photo / gallery preview */}
         {phase === "photo_preview" && preview && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={preview} alt="Captured" className="w-full h-full object-cover" />
         )}
 
-        {/* Loading / starting overlay */}
+        {/* Starting */}
         {(phase === "scan_starting" || phase === "photo_starting") && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 rounded-3xl">
             <Loader2 size={30} className="animate-spin" style={{ color: "#86EFAC" }} />
@@ -307,7 +340,7 @@ export default function ScanAndCaptureModal({
           </div>
         )}
 
-        {/* Looking up product overlay */}
+        {/* Looking up */}
         {phase === "scan_looking" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/85 rounded-3xl px-6 text-center">
             <Loader2 size={30} className="animate-spin" style={{ color: "#86EFAC" }} />
@@ -316,7 +349,7 @@ export default function ScanAndCaptureModal({
           </div>
         )}
 
-        {/* Not found overlay */}
+        {/* Not found */}
         {phase === "scan_not_found" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/85 rounded-3xl px-8 text-center">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "rgba(225,29,72,0.2)" }}>
@@ -336,7 +369,7 @@ export default function ScanAndCaptureModal({
           </div>
         )}
 
-        {/* Submitting overlay */}
+        {/* Submitting */}
         {phase === "submitting" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/75 rounded-3xl">
             <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: "#3A7326" }}>
@@ -346,7 +379,7 @@ export default function ScanAndCaptureModal({
           </div>
         )}
 
-        {/* Camera error */}
+        {/* Camera error — show gallery fallback */}
         {phase === "cam_error" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/85 rounded-3xl px-8 text-center">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "rgba(225,29,72,0.2)" }}>
@@ -356,18 +389,25 @@ export default function ScanAndCaptureModal({
               <p className="text-white font-semibold text-[14px]">Camera Unavailable</p>
               <p className="text-[12px] mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>{errMsg}</p>
             </div>
-            <button onClick={handleRescan} className="px-5 py-2.5 rounded-xl text-sm font-semibold"
-              style={{ backgroundColor: "#3A7326", color: "white" }}>
-              Try Again
-            </button>
+            <div className="flex gap-2 flex-wrap justify-center">
+              <button onClick={handleRescan}
+                className="px-4 py-2 rounded-xl text-sm font-semibold"
+                style={{ backgroundColor: "#3A7326", color: "white" }}>
+                Try Again
+              </button>
+              <button onClick={handleGalleryPick}
+                className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1.5"
+                style={{ backgroundColor: "rgba(255,255,255,0.12)", color: "white" }}>
+                <Images size={14} /> Choose from Gallery
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Scan frame — barcode scanner */}
+        {/* Scan frame */}
         {phase === "scan_live" && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div
-              className="absolute inset-0"
+            <div className="absolute inset-0"
               style={{ background: "radial-gradient(ellipse 55% 35% at 50% 50%, transparent, rgba(0,0,0,0.5))" }}
             />
             <div className="relative w-60 h-32 sm:w-80 sm:h-40">
@@ -378,7 +418,6 @@ export default function ScanAndCaptureModal({
               ].map((cls, i) => (
                 <div key={i} className={`absolute w-7 h-7 ${cls}`} style={{ borderColor: "#86EFAC" }} />
               ))}
-              {/* Animated scan line */}
               <div className="absolute inset-x-2 overflow-hidden" style={{ top: "10%", bottom: "10%" }}>
                 <div className="h-0.5 w-full rounded-full"
                   style={{
@@ -395,8 +434,7 @@ export default function ScanAndCaptureModal({
         {/* Photo viewfinder */}
         {phase === "photo_live" && (
           <>
-            <div
-              className="absolute inset-0 pointer-events-none"
+            <div className="absolute inset-0 pointer-events-none"
               style={{ background: "radial-gradient(ellipse 65% 55% at 50% 50%, transparent, rgba(0,0,0,0.45))" }}
             />
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -410,7 +448,6 @@ export default function ScanAndCaptureModal({
                 ))}
               </div>
             </div>
-            {/* Product name chip */}
             {product && (
               <div className="absolute top-3 left-1/2 -translate-x-1/2">
                 <div className="px-3 py-1.5 rounded-full text-[12px] font-semibold whitespace-nowrap"
@@ -422,14 +459,13 @@ export default function ScanAndCaptureModal({
           </>
         )}
 
-        {/* Hidden canvas */}
         <canvas ref={canvasRef} className="hidden" />
       </div>
 
       {/* Bottom controls */}
       <div className="px-5 pt-4 pb-6 shrink-0 space-y-3">
 
-        {/* Scan live — manual entry option */}
+        {/* Scan live / manual */}
         {(phase === "scan_live" || phase === "scan_manual") && (
           <>
             <p className="text-center text-[12px]" style={{ color: "rgba(255,255,255,0.4)" }}>
@@ -484,9 +520,10 @@ export default function ScanAndCaptureModal({
           </>
         )}
 
-        {/* Photo live — shutter button */}
+        {/* Photo live — shutter + gallery option */}
         {phase === "photo_live" && (
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-3">
+            {/* Shutter */}
             <button
               onClick={handleCapture}
               className="w-16 h-16 rounded-full flex items-center justify-center active:scale-95 transition-transform"
@@ -498,27 +535,46 @@ export default function ScanAndCaptureModal({
             <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.4)" }}>
               Tap to capture
             </p>
+            {/* ── Gallery option ── */}
+            <button
+              onClick={handleGalleryPick}
+              className="flex items-center gap-2 px-5 py-2 rounded-xl text-[12px] font-semibold transition-colors hover:opacity-80"
+              style={{ backgroundColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.8)" }}
+            >
+              <Images size={14} />
+              Choose from gallery instead
+            </button>
           </div>
         )}
 
-        {/* Photo preview — retake or use */}
+        {/* Photo preview — retake / gallery / confirm */}
         {phase === "photo_preview" && (
-          <div className="flex gap-3">
-            <Button
-              onClick={handleRetakePhoto}
-              variant="outline"
-              className="flex-1 h-12 rounded-2xl text-sm font-semibold"
-              style={{ borderColor: "rgba(255,255,255,0.2)", color: "white", backgroundColor: "rgba(255,255,255,0.08)" }}
+          <div className="space-y-2">
+            <div className="flex gap-3">
+              <Button
+                onClick={handleRetakePhoto}
+                variant="outline"
+                className="flex-1 h-12 rounded-2xl text-sm font-semibold"
+                style={{ borderColor: "rgba(255,255,255,0.2)", color: "white", backgroundColor: "rgba(255,255,255,0.08)" }}
+              >
+                <RefreshCw size={14} className="mr-1.5" /> Retake
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                className="flex-1 h-12 rounded-2xl text-sm font-semibold border-0"
+                style={{ backgroundColor: "#3A7326", color: "white" }}
+              >
+                <CheckCircle2 size={14} className="mr-1.5" /> Confirm & Save
+              </Button>
+            </div>
+            {/* Choose a different image from gallery */}
+            <button
+              onClick={handleGalleryPick}
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-[12px] font-semibold hover:opacity-80"
+              style={{ color: "rgba(255,255,255,0.45)" }}
             >
-              <RefreshCw size={14} className="mr-1.5" /> Retake
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              className="flex-1 h-12 rounded-2xl text-sm font-semibold border-0"
-              style={{ backgroundColor: "#3A7326", color: "white" }}
-            >
-              <CheckCircle2 size={14} className="mr-1.5" /> Confirm & Save
-            </Button>
+              <Images size={13} /> Choose a different image from gallery
+            </button>
           </div>
         )}
       </div>

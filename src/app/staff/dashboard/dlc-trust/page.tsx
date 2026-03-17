@@ -1,12 +1,11 @@
-import OpenedItemsPage from '@/components/dashboard/dlcTrack/OpenedItemsPage'
-import React from 'react'
+import OpenedItemsPage from "@/components/dashboard/dlcTrack/OpenedItemsPage";
+import { MOCK_PRODUCTS } from "@/data/productData";
 
-function page() {
+export default function page() {
+  const data = MOCK_PRODUCTS;
   return (
-    <div>
-      <OpenedItemsPage/>
+    <div className="p-6">
+      <OpenedItemsPage lookupProduct={data.map(product => product.barcode)} />
     </div>
-  )
+  );
 }
-
-export default page
