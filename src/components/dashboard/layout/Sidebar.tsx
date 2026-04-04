@@ -3,6 +3,7 @@ import SidebarNavLinks from "./Sidebarnavlinks";
 import AddProductCard from "./Addproductcard";
 import ExpiroLogo from "@/components/elements/Logo";
 import SellProductCard from "./SellProductCard";
+import Link from "next/link";
 
 export default function Sidebar() {
   return (
@@ -25,6 +26,7 @@ export default function Sidebar() {
         <AddProductCard />
         <SellProductCard />
 
+        <Link href={"/login"}>
         <button
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors hover:bg-gray-100"
           style={{ color: "#51564E" }}
@@ -33,6 +35,7 @@ export default function Sidebar() {
           <LogOut size={18} aria-hidden="true" />
           Logout
         </button>
+        </Link>
       </div>
     </aside>
   );

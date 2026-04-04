@@ -5,8 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,8 @@ import {
 import { Field, FieldError } from "@/components/ui/field";
 import { OtpInput } from "@/components/auth/OtpInput";
 import ExpiroLogo from "@/components/elements/Logo";
+import { verifyOtpAction } from "@/actions/auth/signup.action";
+import { resendOtpAction, verifyForgotOtpAction } from "@/actions/auth/forgetPassword.action";
 
 const schema = z.object({
   otp: z
@@ -34,9 +36,16 @@ const RESEND_COOLDOWN = 30;
 
 export default function OtpVerificationPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const email = searchParams.get("email") ?? "";
+  const rawMode = searchParams.get("mode");
+const mode = rawMode?.trim().toLowerCase() ?? "signup";
+const isForgotPasswordMode = mode === "forgot-password";
+
   const [otp, setOtp] = React.useState("");
   const [countdown, setCountdown] = React.useState(RESEND_COOLDOWN);
   const [canResend, setCanResend] = React.useState(false);
+  const [isPending, startTransition] = React.useTransition();
   const timerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   const {
@@ -44,17 +53,18 @@ export default function OtpVerificationPage() {
     setValue,
     formState: { errors },
     clearErrors,
+    setError,
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { otp: "" },
   });
 
-  // Start countdown on mount
-
   function startCountdown() {
     setCanResend(false);
     setCountdown(RESEND_COOLDOWN);
+
     if (timerRef.current) clearInterval(timerRef.current);
+
     timerRef.current = setInterval(() => {
       setCountdown((c) => {
         if (c <= 1) {
@@ -81,23 +91,80 @@ export default function OtpVerificationPage() {
   }
 
   function handleResend() {
-    if (!canResend) return;
+  if (!canResend || !email) return;
+
+  startTransition(async () => {
+    const result = await resendOtpAction({ email });
+
+    if (!result.success) {
+      toast.error("Resend failed", {
+        description: result.message,
+      });
+      return;
+    }
+
     setOtp("");
     setValue("otp", "");
+    clearErrors("otp");
     startCountdown();
-    toast("Code resent!", {
-      description: "A new OTP was sent to your email.",
-      position: "bottom-right",
+
+    toast.success("OTP resent", {
+      description: result.message,
     });
-  }
+  });
+}
 
   function onSubmit(data: FormValues) {
-    toast("OTP Verified!", {
-      description: `Code ${data.otp} accepted.`,
-      position: "bottom-right",
+  if (!email) {
+    toast.error("Missing email", {
+      description: isForgotPasswordMode
+        ? "Please request forgot password again."
+        : "Please sign up again before verifying OTP.",
     });
-    router.push("/new-password");
+
+    router.push(isForgotPasswordMode ? "/forgot-password" : "/signup");
+    return;
   }
+
+  startTransition(async () => {
+    console.log("OTP mode:", mode);
+    console.log("isForgotPasswordMode:", isForgotPasswordMode);
+
+    const result = isForgotPasswordMode
+      ? await verifyForgotOtpAction({
+          email,
+          otp: data.otp,
+        })
+      : await verifyOtpAction({
+          email,
+          otp: data.otp,
+        });
+
+        console.log("checking the api:",result)
+
+    if (!result.success) {
+      if (result.fieldErrors?.otp?.[0]) {
+        setError("otp", {
+          type: "server",
+          message: result.fieldErrors.otp[0],
+        });
+      }
+
+      toast.error("OTP verification failed", {
+        description: result.message,
+      });
+      return;
+    }
+
+    toast.success("OTP verified", {
+      description: result.message,
+    });
+
+    if (isForgotPasswordMode) {
+      router.push("/new-password");
+    }
+  });
+}
 
   const hasError = !!errors.otp;
 
@@ -110,11 +177,13 @@ export default function OtpVerificationPage() {
         <div className="flex items-center justify-center lg:pl-8">
           <ExpiroLogo />
         </div>
+
         <CardTitle className="text-2xl font-bold" style={{ color: "#1A3340" }}>
           Verify your Email
         </CardTitle>
+
         <CardDescription className="w-full" style={{ color: "#51564E" }}>
-          We sent a 6-digit code to your email. Enter it below to continue.
+          We sent a 6-digit code to {email || "your email"}. Enter it below to continue.
         </CardDescription>
       </CardHeader>
 
@@ -135,17 +204,17 @@ export default function OtpVerificationPage() {
           </Field>
         </form>
 
-        {/* Resend row */}
         <div className="flex items-center justify-center gap-2 mt-6">
           <span className="text-sm" style={{ color: "#51564E" }}>
             Didn&apos;t receive the code?
           </span>
+
           <Button
             type="button"
             variant="secondary"
             className="h-8 px-3 text-sm rounded-lg"
             onClick={handleResend}
-            disabled={!canResend}
+            disabled={!canResend || isPending}
             aria-label={
               canResend
                 ? "Resend OTP code"
@@ -161,16 +230,26 @@ export default function OtpVerificationPage() {
         <Button
           type="submit"
           form="otp-form"
+          disabled={isPending}
           className="w-full h-12 rounded-xl text-base font-semibold"
           style={{ backgroundColor: "#3A7326", color: "white" }}
         >
-          Verify Code
+          {isPending ? (
+            <span className="flex items-center gap-2">
+              <Loader2 size={18} className="animate-spin" />
+              Verifying...
+            </span>
+          ) : (
+            "Verify Code"
+          )}
         </Button>
+
         <Button
           type="button"
           variant="secondary"
           className="w-full h-12 rounded-xl text-base"
           onClick={() => router.push("/login")}
+          disabled={isPending}
         >
           <ArrowLeft size={16} className="mr-2" aria-hidden="true" />
           Back to Login

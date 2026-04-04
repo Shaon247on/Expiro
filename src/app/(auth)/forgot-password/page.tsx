@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import * as z from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Mail } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import ExpiroLogo from "@/components/elements/Logo";
+import { forgotPasswordAction } from "@/actions/auth/forgetPassword.action";
+import React from "react";
 
 const schema = z.object({
   email: z.string().email("Please enter a valid email address."),
@@ -34,6 +36,7 @@ type FormValues = z.infer<typeof schema>;
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
+  const [isPending, startTransition] = React.useTransition();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -41,11 +44,35 @@ export default function ForgotPasswordPage() {
   });
 
   function onSubmit(data: FormValues) {
-    toast("Reset link sent!", {
-      description: `We sent a password reset link to ${data.email}`,
-      position: "bottom-right",
+    startTransition(async () => {
+      const result = await forgotPasswordAction({
+        email: data.email,
+      });
+
+      if (!result.success) {
+        if (result.fieldErrors?.email?.[0]) {
+          form.setError("email", {
+            type: "server",
+            message: result.fieldErrors.email[0],
+          });
+        }
+
+        toast.error("Request failed", {
+          description: result.message,
+        });
+        return;
+      }
+
+      toast.success("Verification code sent", {
+        description: result.message,
+      });
+
+      router.push(
+        `/otp-verification?email=${encodeURIComponent(
+          data.email
+        )}&mode=forgot-password`
+      );
     });
-    router.push("/otp-verification");
   }
 
   return (
@@ -57,9 +84,11 @@ export default function ForgotPasswordPage() {
         <div className="flex items-center justify-center lg:pl-8">
           <ExpiroLogo />
         </div>
+
         <CardTitle className="text-2xl font-bold" style={{ color: "#1A3340" }}>
           Forgot your Password?
         </CardTitle>
+
         <CardDescription className="w-full" style={{ color: "#51564E" }}>
           Enter your email address and we&apos;ll send you a one-time
           verification code.
@@ -81,6 +110,7 @@ export default function ForgotPasswordPage() {
                   >
                     Email Address
                   </FieldLabel>
+
                   <Input
                     {...field}
                     id="forgot-email"
@@ -88,7 +118,9 @@ export default function ForgotPasswordPage() {
                     placeholder="username@gmail.com"
                     aria-invalid={fieldState.invalid}
                     className="bg-white border-gray-200 rounded-xl h-12"
+                    disabled={isPending}
                   />
+
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
                   )}
@@ -103,20 +135,31 @@ export default function ForgotPasswordPage() {
         <Button
           type="submit"
           form="forgot-form"
+          disabled={isPending}
           className="w-full h-12 rounded-xl text-base font-semibold"
           style={{ backgroundColor: "#3A7326", color: "white" }}
         >
-          Send Verification Code
+          {isPending ? (
+            <span className="flex items-center gap-2">
+              <Loader2 size={18} className="animate-spin" />
+              Sending...
+            </span>
+          ) : (
+            "Send Verification Code"
+          )}
         </Button>
+
         <Button
           type="button"
           variant="secondary"
           className="w-full h-12 rounded-xl text-base"
           onClick={() => router.push("/login")}
+          disabled={isPending}
         >
           <ArrowLeft size={16} className="mr-2" aria-hidden="true" />
           Back to Login
         </Button>
+
         <p className="text-sm text-center" style={{ color: "#51564E" }}>
           Remembered it?{" "}
           <Link
