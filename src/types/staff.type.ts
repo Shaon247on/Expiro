@@ -1,21 +1,58 @@
-
-export type StaffRole   = "Admin" | "Manager" | "Staff";
-export type StaffStatus = "active" | "banned";
-
-export interface StaffMember {
+export type StaffApiMember = {
   id: number;
   name: string;
-  role: StaffRole;
   email: string;
   phone: string;
-  status: StaffStatus;
-  avatarInitials: string;
-  avatarBg: string;
-  joinedDate: string;
-}
-
-export const roleMeta: Record<StaffRole, { color: string; dot: string }> = {
-  Admin:   { color: "#15803D", dot: "#22C55E" },
-  Manager: { color: "#B45309", dot: "#EAB308" },
-  Staff:   { color: "#0E7490", dot: "#06B6D4" },
+  role: "staff";
+  is_active: boolean;
+  profile_image: string | null;
+  date_joined: string;
+  invitation_token: string | null;
+  invitation_expires_at: string | null;
+  invitation_is_used: boolean;
+  invitation_accepted_at: string | null;
 };
+
+export type StaffListResponse = {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: {
+    success: boolean;
+    message: string;
+    data: StaffApiMember[];
+  };
+};
+
+export type InviteStaffResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+    role: "staff";
+  };
+};
+
+export type BanUnbanStaffResponse = {
+  message: string;
+  data: {
+    id: number;
+    name: string;
+    email: string;
+    is_active: boolean;
+  };
+};
+
+export type RemoveStaffResponse = {
+  message: string;
+};
+
+export const roleMeta = {
+  staff: {
+    dot: "#3A7326",
+    color: "#3A7326",
+  },
+} as const;

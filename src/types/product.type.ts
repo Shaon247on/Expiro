@@ -1,24 +1,102 @@
-export type ProductStatus =
-  | "Urgent"
-  | "Expiring soon"
-  | "Safe Item"
-  | "Remove Item"
-  | "Open Item";
+export type ProductApiStatus = "active" | "opened" | "removed";
+export type ProductBusinessStatus =
+  | "active"
+  | "remove_item"
+  | "open_item";
 
-export interface Product {
-  id: number;
-  name: string;
+export type ProductBatch = {
+  id: string;
+  batch_code: string;
+  received_quantity: number;
+  available_quantity: number;
+  purchase_date: string;
+  expiry_date: string;
+  status: string;
+  unit_price: string;
+  created_at: string;
+  updated_at: string;
+  total_unit_labels?: number;
+};
+
+export type UnitLabel = {
+  id: string;
+  unit_number: number;
+  unique_barcode: string;
+  status: string;
+  opened_at: string | null;
+  opened_expiry_date: string | null;
+  sold_at: string | null;
+  removed_at: string | null;
+  created_at: string;
+};
+
+export type ProductItem = {
+  id: string;
   category: string;
+  category_name: string;
+  category_image: string | null;
+  name: string;
+  barcode: string;
+  quantity: number;
+  batch_count: number;
+  purchase_date: string;
+  expiry_date: string;
+  track_open_expiry_days: boolean;
+  open_expiry_days: number | null;
+  labels_print_confirmed: boolean;
+  status: ProductApiStatus;
   price: string;
-  expireDate: string;
-  totalProducts: number;
-  status: ProductStatus;
-  thumbnail: string;
-  /** Extra detail fields shown in the View dialog */
-  barcode?: string;
-  storeName?: string;
-  datePurchased?: string;
-  openExpiryDays?: number;
-  description?: string;
-  quantity?: number;
-}
+  description: string | null;
+  created_by: number | null;
+  products_status: ProductBusinessStatus;
+  active_expiry_date: string | null;
+  total_unit_labels: number;
+  batches: ProductBatch[];
+  unit_labels?: UnitLabel[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProductListResponse = {
+  message: string;
+  count: number;
+  filter_status: string;
+  data: ProductItem[];
+};
+
+export type ProductDetailsResponse = {
+  message: string;
+  data: ProductItem;
+};
+
+export type ProductCreateOrUpdateResponse = {
+  message: string;
+  data: ProductItem;
+};
+
+export type BatchDetailsResponse = {
+  success: boolean;
+  message: string;
+  data: ProductBatch & {
+    product_id: string;
+    product_name: string;
+    unit_labels: UnitLabel[];
+  };
+};
+
+export const PAGE_SIZE = 10;
+
+export const PRODUCT_STATUS_LABELS: Record<ProductBusinessStatus, string> = {
+  active: "Safe Item",
+  remove_item: "Remove Item",
+  open_item: "Open Item",
+};
+
+export const PRODUCT_STATUS_META: Record<
+  ProductBusinessStatus,
+  { dot: string; color: string }
+> = {
+  active: { dot: "#16A34A", color: "#16A34A" },
+  remove_item: { dot: "#DC2626", color: "#DC2626" },
+  open_item: { dot: "#15803D", color: "#15803D" },
+};

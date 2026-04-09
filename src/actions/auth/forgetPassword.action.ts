@@ -238,7 +238,7 @@ export async function resetPasswordAction(
   const reset_token = payload.reset_token?.trim();
   const new_password = payload.new_password;
   const confirm_password = payload.confirm_password;
-
+console.log("the token:", reset_token)
   if (!reset_token) {
     return {
       success: false,

@@ -13,22 +13,23 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+interface BarcodeUnitLabel {
+  id: string;
+  unit_number: number;
+  unique_barcode: string;
+  status?: string;
+}
 
 interface BarcodePrintSheetProps {
   open: boolean;
-  itemName: string;
-  quantity: number;
-  baseBarcode: string;
+  productName: string;
+  batchCode: string;
+  labels: BarcodeUnitLabel[];
   onPrinted: () => void;
   onClose: () => void;
 }
 
-// ── Constants ──────────────────────────────────────────────────────────────────
-
-const LABELS_PER_PAGE = 9; // 3 × 3 grid on A4 landscape
-
-// ── JsBarcode loader ───────────────────────────────────────────────────────────
+const LABELS_PER_PAGE = 9;
 
 function loadJsBarcode(): Promise<void> {
   return new Promise((resolve) => {
@@ -37,6 +38,22 @@ function loadJsBarcode(): Promise<void> {
       resolve();
       return;
     }
+
+    const existing = document.querySelector(
+      'script[src*="JsBarcode.all.min.js"]'
+    ) as HTMLScriptElement | null;
+
+    if (existing) {
+      existing.addEventListener("load", () => resolve(), { once: true });
+      if (
+        // @ts-expect-error CDN global
+        typeof window.JsBarcode !== "undefined"
+      ) {
+        resolve();
+      }
+      return;
+    }
+
     const s = document.createElement("script");
     s.src =
       "https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js";
@@ -48,6 +65,7 @@ function loadJsBarcode(): Promise<void> {
 function renderSvgBarcodes(container: HTMLElement) {
   container.querySelectorAll<SVGElement>("svg[data-code]").forEach((svg) => {
     const code = svg.getAttribute("data-code") ?? "";
+
     try {
       // @ts-expect-error CDN global
       window.JsBarcode(svg, code, {
@@ -58,22 +76,24 @@ function renderSvgBarcodes(container: HTMLElement) {
         margin: 2,
       });
     } catch {
-      /* ignore */
+      // ignore barcode render errors
     }
   });
 }
 
-// ── Printable content component ────────────────────────────────────────────────
-// This is the ONLY thing that gets sent to the printer.
-
 interface PrintContentProps {
-  itemName: string;
-  labels: { no: number; code: string }[];
+  productName: string;
+  batchCode: string;
+  labels: BarcodeUnitLabel[];
 }
 
-const PrintContent = ({ itemName, labels }: PrintContentProps) => {
-  // Split into pages of LABELS_PER_PAGE
-  const pages: (typeof labels)[] = [];
+const PrintContent = ({
+  productName,
+  batchCode,
+  labels,
+}: PrintContentProps) => {
+  const pages: BarcodeUnitLabel[][] = [];
+
   for (let i = 0; i < labels.length; i += LABELS_PER_PAGE) {
     pages.push(labels.slice(i, i + LABELS_PER_PAGE));
   }
@@ -100,9 +120,10 @@ const PrintContent = ({ itemName, labels }: PrintContentProps) => {
           {Array.from({ length: LABELS_PER_PAGE }).map((_, idx) => {
             const label = page[idx];
             if (!label) return <div key={idx} />;
+
             return (
               <div
-                key={label.no}
+                key={label.id}
                 style={{
                   border: "1px solid #d1d5db",
                   borderRadius: "8px",
@@ -125,8 +146,9 @@ const PrintContent = ({ itemName, labels }: PrintContentProps) => {
                     fontFamily: "sans-serif",
                   }}
                 >
-                  {label.no}
+                  {label.unit_number}
                 </span>
+
                 <span
                   style={{
                     fontSize: "8pt",
@@ -139,12 +161,9 @@ const PrintContent = ({ itemName, labels }: PrintContentProps) => {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {itemName}
+                  {productName}
                 </span>
-                <svg
-                  data-code={label.code}
-                  style={{ width: "100%", maxWidth: "70mm", height: "auto" }}
-                />
+
                 <span
                   style={{
                     fontSize: "7pt",
@@ -153,7 +172,24 @@ const PrintContent = ({ itemName, labels }: PrintContentProps) => {
                     textAlign: "center",
                   }}
                 >
-                  {label.code}
+                  {batchCode}
+                </span>
+
+                <svg
+                  data-code={label.unique_barcode}
+                  style={{ width: "100%", maxWidth: "70mm", height: "auto" }}
+                />
+
+                <span
+                  style={{
+                    fontSize: "7pt",
+                    color: "#9ca3af",
+                    fontFamily: "monospace",
+                    textAlign: "center",
+                    wordBreak: "break-all",
+                  }}
+                >
+                  {label.unique_barcode}
                 </span>
               </div>
             );
@@ -164,33 +200,24 @@ const PrintContent = ({ itemName, labels }: PrintContentProps) => {
   );
 };
 
-// ── Main component ─────────────────────────────────────────────────────────────
-
 export default function BarcodePrintSheet({
   open,
-  itemName,
-  quantity,
-  baseBarcode,
+  productName,
+  batchCode,
+  labels,
   onPrinted,
   onClose,
 }: BarcodePrintSheetProps) {
   const [printed, setPrinted] = useState(false);
-  const printRef = useRef<HTMLDivElement>(null); // hidden — sent to printer
-  const previewRef = useRef<HTMLDivElement>(null); // visible — screen preview
+  const printRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
 
-  const labels = Array.from({ length: quantity }, (_, i) => ({
-    no: i + 1,
-    code: `${baseBarcode || "ITEM"}-${String(i + 1).padStart(2, "0")}`,
-  }));
-
-  // Reset state when dialog opens/closes
   useEffect(() => {
     if (!open) {
       setPrinted(false);
     }
   }, [open]);
 
-  // Render barcodes into BOTH containers after open / data changes
   const renderAll = useCallback(() => {
     loadJsBarcode().then(() => {
       if (printRef.current) renderSvgBarcodes(printRef.current);
@@ -199,13 +226,15 @@ export default function BarcodePrintSheet({
   }, []);
 
   useEffect(() => {
-    if (open) setTimeout(renderAll, 120);
-  }, [open, quantity, baseBarcode, renderAll]);
+    if (open) {
+      const t = setTimeout(renderAll, 120);
+      return () => clearTimeout(t);
+    }
+  }, [open, labels, renderAll]);
 
-  // react-to-print — targets the hidden printRef
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: `Barcodes — ${itemName}`,
+    documentTitle: `Barcodes — ${productName} — ${batchCode}`,
     pageStyle: `
       @page { size: A4 landscape; margin: 0; }
       @media print {
@@ -221,7 +250,7 @@ export default function BarcodePrintSheet({
     onClose();
   }
 
-  const pageCount = Math.ceil(quantity / LABELS_PER_PAGE);
+  const pageCount = Math.ceil(labels?.length / LABELS_PER_PAGE);
 
   return (
     <Dialog
@@ -236,7 +265,6 @@ export default function BarcodePrintSheet({
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        {/* Header */}
         <DialogHeader className="flex flex-row items-center gap-3 px-6 py-4 border-b border-gray-100 space-y-0">
           <div
             className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
@@ -244,21 +272,22 @@ export default function BarcodePrintSheet({
           >
             <Printer size={18} style={{ color: "#3A7326" }} />
           </div>
+
           <div className="flex-1 min-w-0">
             <DialogTitle
               className="text-[15px] font-bold leading-tight"
               style={{ color: "#1A3340" }}
             >
-              Print Barcode Labels
+              Print Batch Barcode Labels
             </DialogTitle>
+
             <DialogDescription className="text-[12px] text-gray-400 mt-0">
-              {quantity} label{quantity !== 1 ? "s" : ""} · {pageCount} A4 page
-              {pageCount !== 1 ? "s" : ""} (landscape, 9 per page) · {itemName}
+              {labels?.length} label{labels?.length !== 1 ? "s" : ""} · {pageCount} A4 page
+              {pageCount !== 1 ? "s" : ""} · {productName} · {batchCode}
             </DialogDescription>
           </div>
         </DialogHeader>
 
-        {/* Instruction banner */}
         <div
           className="mx-6 mt-4 flex items-start gap-2.5 rounded-xl px-4 py-3 text-[12px]"
           style={{
@@ -269,20 +298,21 @@ export default function BarcodePrintSheet({
         >
           <AlertTriangle size={14} className="shrink-0 mt-0.5" />
           <span>
-            Print all <strong>{quantity}</strong> barcode labels and attach each
-            numbered label to its corresponding product unit. You must confirm
-            printing before you can save the product.
+            Print all <strong>{labels?.length}</strong> barcode labels for this batch and attach
+            each numbered label to its matching unit.
           </span>
         </div>
 
-        {/* ── Hidden element sent to printer — A4 landscape pages ── */}
         <div style={{ display: "none" }} aria-hidden="true">
           <div ref={printRef}>
-            <PrintContent itemName={itemName} labels={labels} />
+            <PrintContent
+              productName={productName}
+              batchCode={batchCode}
+              labels={labels}
+            />
           </div>
         </div>
 
-        {/* ── Screen preview ── */}
         <div
           ref={previewRef}
           className="overflow-y-auto px-6 py-4"
@@ -294,9 +324,9 @@ export default function BarcodePrintSheet({
               gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
             }}
           >
-            {labels.map(({ no, code }) => (
+            {labels?.map((label) => (
               <div
-                key={no}
+                key={label.id}
                 className="flex flex-col items-center gap-1 rounded-2xl border border-gray-200 p-3 bg-white"
                 style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}
               >
@@ -307,25 +337,31 @@ export default function BarcodePrintSheet({
                     color: "#111827",
                   }}
                 >
-                  {no}
+                  {label.unit_number}
                 </span>
+
                 <span className="text-[10px] text-gray-400 text-center truncate w-full">
-                  {itemName}
+                  {productName}
                 </span>
+
+                <span className="text-[9px] text-gray-400 font-mono text-center">
+                  {batchCode}
+                </span>
+
                 <svg
-                  data-code={code}
+                  data-code={label.unique_barcode}
                   className="w-full"
                   style={{ minHeight: 60 }}
                 />
-                <span className="text-[9px] text-gray-400 font-mono text-center">
-                  {code}
+
+                <span className="text-[9px] text-gray-400 font-mono text-center break-all">
+                  {label.unique_barcode}
                 </span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Footer */}
         <DialogFooter className="flex flex-col gap-3 border-t border-gray-100 px-4 py-4 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
           {printed ? (
             <div
@@ -333,11 +369,11 @@ export default function BarcodePrintSheet({
               style={{ color: "#3A7326" }}
             >
               <CheckCircle2 size={16} className="mt-0.5 shrink-0 sm:mt-0" />
-              <span>Labels printed — you can now save the product.</span>
+              <span>Labels printed successfully.</span>
             </div>
           ) : (
             <p className="mr-auto text-[12px] text-gray-400">
-              Print the labels, then confirm to enable saving.
+              Print the labels, then confirm.
             </p>
           )}
 
@@ -367,7 +403,7 @@ export default function BarcodePrintSheet({
                 style={{ backgroundColor: "#16A34A", color: "white" }}
               >
                 <CheckCircle2 size={14} className="mr-1.5 shrink-0" />
-                Confirm & Continue
+                Confirm
               </Button>
             )}
           </div>

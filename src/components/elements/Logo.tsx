@@ -10,7 +10,7 @@ const ExpiroLogo = () => (
       transition={{ duration: 0.5 }}
     >
       <Image
-        src={"/logo.png"}
+        src={"/logoIcon.png"}
         alt="logo Image"
         width={106}
         height={106}

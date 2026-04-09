@@ -34,6 +34,11 @@ const leftPanelContent: Record<
     heading1: "Password",
     sub: "Choose a strong password to protect your account.",
   },
+  "/accept-invite": {
+    heading: "Accept Your\nInvitation",
+    heading1: "Invitation",
+    sub: "Set your password to activate your staff account.",
+  },
 };
 
 export default function AuthLayout({

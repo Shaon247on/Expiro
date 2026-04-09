@@ -1,13 +1,26 @@
-import { roleMeta, StaffMember } from "@/types/staff.type";
+import { roleMeta, StaffApiMember } from "@/types/staff.type";
 import StaffActions from "./Staffactions";
+import Image from "next/image";
 
 interface StaffListProps {
-  members: StaffMember[];
+  members: StaffApiMember[];
 }
 
-function StaffCard({ member }: { member: StaffMember }) {
-  const role     = roleMeta[member.role];
-  const isBanned = member.status === "banned";
+function getInitials(name: string) {
+  const parts = name.trim().split(" ").filter(Boolean);
+  if (parts.length === 0) return "ST";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+}
+
+function getAvatarBg(id: number) {
+  const palette = ["#3D4F61", "#3A7326", "#7C3AED", "#EA580C", "#2563EB"];
+  return palette[id % palette.length];
+}
+
+function StaffCard({ member }: { member: StaffApiMember }) {
+  const role = roleMeta[member.role];
+  const isBanned = !member.is_active;
 
   return (
     <article
@@ -15,38 +28,62 @@ function StaffCard({ member }: { member: StaffMember }) {
       style={{ borderColor: isBanned ? "#FEE2E2" : "#F0F0F0" }}
       aria-label={member.name}
     >
-      {/* Top row: avatar + name + role + 3-dot */}
       <div className="flex items-center gap-4 px-5 py-4">
-        {/* Avatar */}
-        <div
-          className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-white font-bold text-base flex-shrink-0 border-2"
-          style={{
-            backgroundColor: member.avatarBg,
-            borderColor: isBanned ? "#FCA5A5" : "transparent",
-          }}
-          aria-hidden="true"
-        >
-          {member.avatarInitials}
-        </div>
+        {member.profile_image ? (
+          <Image
+            src={member.profile_image}
+            alt={member.name}
+            width={48}
+            height={48}
+            className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover shrink-0 border-2"
+            style={{
+              borderColor: isBanned ? "#FCA5A5" : "transparent",
+            }}
+          />
+        ) : (
+          <div
+            className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-white font-bold text-base shrink-0 border-2"
+            style={{
+              backgroundColor: getAvatarBg(member.id),
+              borderColor: isBanned ? "#FCA5A5" : "transparent",
+            }}
+            aria-hidden="true"
+          >
+            {getInitials(member.name)}
+          </div>
+        )}
 
-        {/* Name + role */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-bold text-sm sm:text-base leading-tight" style={{ color: "#1F485B" }}>
+            <p
+              className="font-bold text-sm sm:text-base leading-tight"
+              style={{ color: "#1F485B" }}
+            >
               {member.name}
             </p>
+
             {isBanned && (
               <span
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
                 style={{ backgroundColor: "#FEE2E2", color: "#DC2626" }}
               >
                 BANNED
               </span>
             )}
+
+            {!member.invitation_is_used && (
+              <span
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                style={{ backgroundColor: "#FEF3C7", color: "#B45309" }}
+              >
+                INVITED
+              </span>
+            )}
           </div>
+
           <div className="flex items-center gap-1.5 mt-0.5">
             <span
-              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+              className="w-2.5 h-2.5 rounded-full shrink-0"
               style={{ backgroundColor: isBanned ? "#EF4444" : role.dot }}
               aria-hidden="true"
             />
@@ -59,21 +96,27 @@ function StaffCard({ member }: { member: StaffMember }) {
           </div>
         </div>
 
-        {/* Client island — 3-dot menu */}
         <StaffActions member={member} />
       </div>
 
-      {/* Bottom row: contact + email */}
       <div
         className="flex flex-wrap items-center gap-x-6 gap-y-1 px-5 py-2.5 border-t text-xs"
-        style={{ borderColor: isBanned ? "#FEE2E2" : "#F5F5F5", backgroundColor: isBanned ? "#FFFAFA" : "#FAFAFA" }}
+        style={{
+          borderColor: isBanned ? "#FEE2E2" : "#F5F5F5",
+          backgroundColor: isBanned ? "#FFFAFA" : "#FAFAFA",
+        }}
       >
         <span>
-          <span className="font-semibold" style={{ color: "#3A7326" }}>Contact: </span>
+          <span className="font-semibold" style={{ color: "#3A7326" }}>
+            Contact:{" "}
+          </span>
           <span className="text-gray-600">{member.phone}</span>
         </span>
+
         <span>
-          <span className="font-semibold" style={{ color: "#3A7326" }}>Email: </span>
+          <span className="font-semibold" style={{ color: "#3A7326" }}>
+            Email:{" "}
+          </span>
           <span className="text-gray-600 break-all">{member.email}</span>
         </span>
       </div>

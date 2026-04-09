@@ -2,31 +2,17 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { ChevronDown, Check } from "lucide-react";
-import { useState } from "react"
-import { ProductStatus } from "@/types/product.type";
+import { useState } from "react";
+import { PRODUCT_STATUS_LABELS, PRODUCT_STATUS_META, type ProductBusinessStatus } from "@/types/product.type";
 
-const ALL_STATUSES: ProductStatus[] = [
-  "Urgent",
-  "Expiring soon",
-  "Safe Item",
-  "Remove Item",
-  "Open Item",
-];
-
-const statusDot: Record<ProductStatus, string> = {
-  "Urgent":        "#E11D48",
-  "Expiring soon": "#EA580C",
-  "Safe Item":     "#16A34A",
-  "Remove Item":   "#E11D48",
-  "Open Item":     "#16A34A",
-};
+const ALL_STATUSES = Object.keys(PRODUCT_STATUS_LABELS) as ProductBusinessStatus[];
 
 interface StatusFilterProps {
-  currentStatus: string; // "" = All Status
+  currentStatus: string;
 }
 
 export default function StatusFilter({ currentStatus }: StatusFilterProps) {
-  const router   = useRouter();
+  const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -34,12 +20,14 @@ export default function StatusFilter({ currentStatus }: StatusFilterProps) {
     setOpen(false);
     const params = new URLSearchParams();
     if (value) params.set("status", value);
-    // Reset to page 1 whenever filter changes
     params.set("page", "1");
     router.push(`${pathname}?${params.toString()}`);
   }
 
-  const label = currentStatus || "All Status";
+  const label = currentStatus
+    ? PRODUCT_STATUS_LABELS[currentStatus as ProductBusinessStatus]
+    : "All Status";
+
   const isFiltered = !!currentStatus;
 
   return (
@@ -56,38 +44,29 @@ export default function StatusFilter({ currentStatus }: StatusFilterProps) {
           backgroundColor: isFiltered ? "#EEF3EA" : "white",
         }}
       >
-        {/* Active dot */}
         {isFiltered && (
           <span
-            className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ backgroundColor: statusDot[currentStatus as ProductStatus] }}
-            aria-hidden="true"
+            className="w-2 h-2 rounded-full shrink-0"
+            style={{
+              backgroundColor:
+                PRODUCT_STATUS_META[currentStatus as ProductBusinessStatus].dot,
+            }}
           />
         )}
         {label}
         <ChevronDown
           size={14}
-          aria-hidden="true"
           className={`transition-transform ${open ? "rotate-180" : ""}`}
         />
       </button>
 
       {open && (
         <>
-          {/* Backdrop — click outside to close */}
-          <div
-            className="fixed inset-0 z-10"
-            aria-hidden="true"
-            onClick={() => setOpen(false)}
-          />
-
-          {/* Dropdown */}
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <ul
             role="listbox"
-            aria-label="Status options"
-            className="absolute right-0 mt-2 z-20 w-44 rounded-2xl border border-gray-100 bg-white shadow-xl overflow-hidden py-1"
+            className="absolute right-0 mt-2 z-20 w-48 rounded-2xl border border-gray-100 bg-white shadow-xl overflow-hidden py-1"
           >
-            {/* "All Status" option */}
             <li
               role="option"
               aria-selected={!isFiltered}
@@ -96,7 +75,7 @@ export default function StatusFilter({ currentStatus }: StatusFilterProps) {
               style={{ color: !isFiltered ? "#3A7326" : "#374151" }}
             >
               <span>All Status</span>
-              {!isFiltered && <Check size={13} style={{ color: "#3A7326" }} aria-hidden="true" />}
+              {!isFiltered && <Check size={13} style={{ color: "#3A7326" }} />}
             </li>
 
             <div className="border-t border-gray-100 my-1" />
@@ -114,13 +93,12 @@ export default function StatusFilter({ currentStatus }: StatusFilterProps) {
                 >
                   <div className="flex items-center gap-2">
                     <span
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: statusDot[s] }}
-                      aria-hidden="true"
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: PRODUCT_STATUS_META[s].dot }}
                     />
-                    {s}
+                    {PRODUCT_STATUS_LABELS[s]}
                   </div>
-                  {active && <Check size={13} style={{ color: "#3A7326" }} aria-hidden="true" />}
+                  {active && <Check size={13} style={{ color: "#3A7326" }} />}
                 </li>
               );
             })}

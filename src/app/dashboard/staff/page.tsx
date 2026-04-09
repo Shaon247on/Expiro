@@ -1,31 +1,45 @@
 import ProductPagination from "@/components/dashboard/product/Productpagination";
 import InviteStaffDialog from "@/components/dashboard/staff/Invitestaffdialog";
 import StaffList from "@/components/dashboard/staff/StaffList";
-import { MOCK_STAFF, STAFF_PAGE_SIZE } from "@/data/staffData";
+import { getStaffListAction } from "@/actions/admin/staff.action";
 import { Suspense } from "react";
 
 interface StaffPageProps {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; search?: string }>;
 }
 
 export const metadata = { title: "Staff — Expiro" };
 
+const STAFF_PAGE_SIZE = 10;
+
 export default async function StaffPage({ searchParams }: StaffPageProps) {
-  const params      = await searchParams;
+  const params = await searchParams;
   const currentPage = Math.max(1, Number(params?.page ?? 1));
-  const totalItems  = MOCK_STAFF.length;
-  const totalPages  = Math.max(1, Math.ceil(totalItems / STAFF_PAGE_SIZE));
-  const safePage    = Math.min(currentPage, totalPages);
-  const start       = (safePage - 1) * STAFF_PAGE_SIZE;
-  const members     = MOCK_STAFF.slice(start, start + STAFF_PAGE_SIZE);
+  const search = params?.search?.trim() ?? "";
+
+  const result = await getStaffListAction({
+    page: currentPage,
+    search,
+  });
+
+  if (!result.success) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="p-5 rounded-2xl bg-white border border-red-100 shadow-sm text-red-500 text-sm">
+          {result.message}
+        </div>
+      </div>
+    );
+  }
+
+  const members = result.data ?? [];
+  const totalItems = result.count ?? members.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / STAFF_PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
 
   return (
     <div className="flex flex-col gap-6">
-      {/* ── Page header ── */}
-      <div
-        className="flex items-center gap-4 p-5 rounded-2xl bg-white border border-gray-100 shadow-sm"
-      >
-        {/* Team icon */}
+      <div className="flex items-center gap-4 p-5 rounded-2xl bg-white border border-gray-100 shadow-sm">
         <div
           className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
           style={{ backgroundColor: "#EEF3EA" }}
@@ -39,26 +53,27 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
         </div>
 
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold" style={{ color: "#1A3340" }}>Team</h1>
-          <p className="text-sm" style={{ color: "#51564E" }}>{totalItems} members</p>
+          <h1 className="text-xl font-bold" style={{ color: "#1A3340" }}>
+            Team
+          </h1>
+          <p className="text-sm" style={{ color: "#51564E" }}>
+            {totalItems} members
+          </p>
         </div>
 
-        {/* Invite staff (client island) */}
-        <Suspense fallback={
-          <div className="h-10 w-28 rounded-xl bg-gray-100 animate-pulse" />
-        }>
+        <Suspense
+          fallback={<div className="h-10 w-28 rounded-xl bg-gray-100 animate-pulse" />}
+        >
           <InviteStaffDialog />
         </Suspense>
       </div>
 
-      {/* ── Staff list (server) ── */}
       <StaffList members={members} />
 
-      {/* ── Pagination ── */}
       <ProductPagination
         currentPage={safePage}
         totalPages={totalPages}
-        basePath="/dashboard/staff"
+        basePath={search ? `/dashboard/staff?search=${encodeURIComponent(search)}` : "/dashboard/staff"}
       />
     </div>
   );

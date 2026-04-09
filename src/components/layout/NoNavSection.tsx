@@ -4,6 +4,7 @@ const AUTH_ROUTES = [
   "/forgot-password",
   "/otp-verification",
   "/new-password",
+  "/accept-invite"
 ] as const;
 
 export const isAuthRoute = (pathname: string) =>

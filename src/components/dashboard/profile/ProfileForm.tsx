@@ -28,6 +28,11 @@ import {
   updateProfileAction,
 } from "@/actions/profile/profile.action";
 
+import {
+  updateNotificationPreferencesAction,
+  type NotificationPreferencesDto,
+} from "@/actions/profile/notification-preferences.action";
+
 const schema = z.object({
   firstName: z.string().min(1, "Required."),
   lastName: z.string().min(1, "Required."),
@@ -35,7 +40,10 @@ const schema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(/^[\d+-]{8,15}$/, "Phone number must be 8 to 15 characters and can include digits, +, or -."),
+    .regex(
+      /^[\d+-]{8,15}$/,
+      "Phone number must be 8 to 15 characters and can include digits, +, or -.",
+    ),
   gender: z.string().min(1, "Required."),
   dob: z.string().min(1, "Required."),
 });
@@ -126,7 +134,11 @@ function NotifRow({
   );
 }
 
-function getInitials(firstName?: string | null, lastName?: string | null, name?: string | null) {
+function getInitials(
+  firstName?: string | null,
+  lastName?: string | null,
+  name?: string | null,
+) {
   if (firstName || lastName) {
     return `${firstName?.[0] ?? ""}${lastName?.[0] ?? ""}`.toUpperCase() || "U";
   }
@@ -140,19 +152,22 @@ function getInitials(firstName?: string | null, lastName?: string | null, name?:
 
 export default function ProfileForm({
   initialProfile,
+  initialNotificationPreferences,
 }: {
   initialProfile: ProfileDto;
+  initialNotificationPreferences: NotificationPreferencesDto;
 }) {
   const [notifs, setNotifs] = useState({
-    expiryAlerts: true,
-    lowStockAlerts: true,
-    dailySummaryEmail: false,
+    expiryAlerts: initialNotificationPreferences.expiry_alerts,
+    lowStockAlerts: initialNotificationPreferences.low_stock_alerts,
+    dailySummaryEmail: initialNotificationPreferences.daily_summary_email,
   });
+  const [isSavingNotifications, setIsSavingNotifications] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [profile, setProfile] = useState<ProfileDto>(initialProfile);
   const [isSavingProfile, startSavingProfile] = useState(false);
   const [isSavingPassword, startSavingPassword] = useState(false);
-console.log("the profile data:",profile)
+  console.log("the profile data:", profile);
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -173,6 +188,43 @@ console.log("the profile data:",profile)
       confirmPassword: "",
     },
   });
+
+  async function handleSaveNotifications() {
+    setIsSavingNotifications(true);
+
+    const previousState = { ...notifs };
+
+    try {
+      const result = await updateNotificationPreferencesAction({
+        expiry_alerts: notifs.expiryAlerts,
+        low_stock_alerts: notifs.lowStockAlerts,
+        daily_summary_email: notifs.dailySummaryEmail,
+      });
+
+      if (!result.success) {
+        setNotifs(previousState);
+
+        toast.error("Failed to update notifications", {
+          description: result.message,
+        });
+        return;
+      }
+
+      if (result.data) {
+        setNotifs({
+          expiryAlerts: result.data.expiry_alerts,
+          lowStockAlerts: result.data.low_stock_alerts,
+          dailySummaryEmail: result.data.daily_summary_email,
+        });
+      }
+
+      toast.success("Notification preferences updated", {
+        description: result.message,
+      });
+    } finally {
+      setIsSavingNotifications(false);
+    }
+  }
 
   const previewImage = useMemo(() => {
     if (selectedImage) return URL.createObjectURL(selectedImage);
@@ -327,7 +379,10 @@ console.log("the profile data:",profile)
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold" style={{ color: "#1F485B" }}>
+        <h1
+          className="text-xl sm:text-2xl font-bold"
+          style={{ color: "#1F485B" }}
+        >
           Hello, {displayName}. Welcome back!
         </h1>
         <p className="text-sm mt-1" style={{ color: "#9CA3AF" }}>
@@ -350,7 +405,11 @@ console.log("the profile data:",profile)
                 style={{ backgroundColor: "#3D4F61" }}
                 aria-label="Profile photo"
               >
-                {getInitials(profile.first_name, profile.last_name, profile.name)}
+                {getInitials(
+                  profile.first_name,
+                  profile.last_name,
+                  profile.name,
+                )}
               </div>
             )}
 
@@ -373,7 +432,10 @@ console.log("the profile data:",profile)
           </div>
 
           <div>
-            <p className="font-bold text-base sm:text-lg" style={{ color: "#1A3340" }}>
+            <p
+              className="font-bold text-base sm:text-lg"
+              style={{ color: "#1A3340" }}
+            >
               {displayName}
             </p>
             <p className="text-sm text-gray-500">{profile.email}</p>
@@ -388,11 +450,17 @@ console.log("the profile data:",profile)
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="s-fname" className={labelCls} style={labelStyle}>
+                    <FieldLabel
+                      htmlFor="s-fname"
+                      className={labelCls}
+                      style={labelStyle}
+                    >
                       First Name
                     </FieldLabel>
                     <Input {...field} id="s-fname" className={inputCls} />
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -401,11 +469,17 @@ console.log("the profile data:",profile)
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="s-lname" className={labelCls} style={labelStyle}>
+                    <FieldLabel
+                      htmlFor="s-lname"
+                      className={labelCls}
+                      style={labelStyle}
+                    >
                       Last Name
                     </FieldLabel>
                     <Input {...field} id="s-lname" className={inputCls} />
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -417,11 +491,22 @@ console.log("the profile data:",profile)
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="s-email" className={labelCls} style={labelStyle}>
+                    <FieldLabel
+                      htmlFor="s-email"
+                      className={labelCls}
+                      style={labelStyle}
+                    >
                       Email Address
                     </FieldLabel>
-                    <Input {...field} id="s-email" type="email" className={inputCls} />
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    <Input
+                      {...field}
+                      id="s-email"
+                      type="email"
+                      className={inputCls}
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -430,11 +515,22 @@ console.log("the profile data:",profile)
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="s-phone" className={labelCls} style={labelStyle}>
+                    <FieldLabel
+                      htmlFor="s-phone"
+                      className={labelCls}
+                      style={labelStyle}
+                    >
                       Phone Number
                     </FieldLabel>
-                    <Input {...field} id="s-phone" type="tel" className={inputCls} />
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    <Input
+                      {...field}
+                      id="s-phone"
+                      type="tel"
+                      className={inputCls}
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -446,7 +542,11 @@ console.log("the profile data:",profile)
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="s-gender" className={labelCls} style={labelStyle}>
+                    <FieldLabel
+                      htmlFor="s-gender"
+                      className={labelCls}
+                      style={labelStyle}
+                    >
                       Gender
                     </FieldLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
@@ -462,7 +562,9 @@ console.log("the profile data:",profile)
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -471,11 +573,22 @@ console.log("the profile data:",profile)
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="s-dob" className={labelCls} style={labelStyle}>
+                    <FieldLabel
+                      htmlFor="s-dob"
+                      className={labelCls}
+                      style={labelStyle}
+                    >
                       Date of Birth
                     </FieldLabel>
-                    <Input {...field} id="s-dob" type="date" className={inputCls} />
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    <Input
+                      {...field}
+                      id="s-dob"
+                      type="date"
+                      className={inputCls}
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -503,14 +616,20 @@ console.log("the profile data:",profile)
         </form>
 
         <div className="mt-10">
-          <p className="text-base font-bold mb-0.5" style={{ color: "#1A3340" }}>
+          <p
+            className="text-base font-bold mb-0.5"
+            style={{ color: "#1A3340" }}
+          >
             Change Password
           </p>
           <p className="text-xs text-gray-500 mb-4">
             Update your password to keep your account secure
           </p>
 
-          <form id="password-form" onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}>
+          <form
+            id="password-form"
+            onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}
+          >
             <FieldGroup className="gap-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <Controller
@@ -518,7 +637,11 @@ console.log("the profile data:",profile)
                   control={passwordForm.control}
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="s-current-password" className={labelCls} style={labelStyle}>
+                      <FieldLabel
+                        htmlFor="s-current-password"
+                        className={labelCls}
+                        style={labelStyle}
+                      >
                         Current Password
                       </FieldLabel>
                       <Input
@@ -528,7 +651,9 @@ console.log("the profile data:",profile)
                         className={inputCls}
                         autoComplete="current-password"
                       />
-                      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
                     </Field>
                   )}
                 />
@@ -538,7 +663,11 @@ console.log("the profile data:",profile)
                   control={passwordForm.control}
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="s-new-password" className={labelCls} style={labelStyle}>
+                      <FieldLabel
+                        htmlFor="s-new-password"
+                        className={labelCls}
+                        style={labelStyle}
+                      >
                         New Password
                       </FieldLabel>
                       <Input
@@ -548,7 +677,9 @@ console.log("the profile data:",profile)
                         className={inputCls}
                         autoComplete="new-password"
                       />
-                      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
                     </Field>
                   )}
                 />
@@ -560,7 +691,11 @@ console.log("the profile data:",profile)
                   control={passwordForm.control}
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="s-confirm-password" className={labelCls} style={labelStyle}>
+                      <FieldLabel
+                        htmlFor="s-confirm-password"
+                        className={labelCls}
+                        style={labelStyle}
+                      >
                         Confirm Password
                       </FieldLabel>
                       <Input
@@ -570,7 +705,9 @@ console.log("the profile data:",profile)
                         className={inputCls}
                         autoComplete="new-password"
                       />
-                      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
                     </Field>
                   )}
                 />
@@ -599,7 +736,10 @@ console.log("the profile data:",profile)
         </div>
 
         <div className="mt-10">
-          <p className="text-base font-bold mb-0.5" style={{ color: "#1A3340" }}>
+          <p
+            className="text-base font-bold mb-0.5"
+            style={{ color: "#1A3340" }}
+          >
             Notification Preferences
           </p>
           <p className="text-xs text-gray-500 mb-1">
@@ -626,8 +766,29 @@ console.log("the profile data:",profile)
               label="Daily Summary Email"
               description="Receive a daily overview of your operations"
               checked={notifs.dailySummaryEmail}
-              onChange={(v) => setNotifs((p) => ({ ...p, dailySummaryEmail: v }))}
+              onChange={(v) =>
+                setNotifs((p) => ({ ...p, dailySummaryEmail: v }))
+              }
             />
+          </div>
+
+          <div className="flex justify-end mt-6">
+            <Button
+              type="button"
+              onClick={handleSaveNotifications}
+              disabled={isSavingNotifications}
+              className="h-11 px-8 rounded-2xl text-sm font-semibold"
+              style={{ backgroundColor: "#3A7326", color: "white" }}
+            >
+              {isSavingNotifications ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 size={16} className="animate-spin" />
+                  Saving...
+                </span>
+              ) : (
+                "Save Notification Settings"
+              )}
+            </Button>
           </div>
         </div>
       </div>

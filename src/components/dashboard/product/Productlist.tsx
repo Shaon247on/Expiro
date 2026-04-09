@@ -1,89 +1,86 @@
-import { statusMeta } from "@/data/productData";
-import { Product } from "@/types/product.type";
+import Image from "next/image";
+import { ProductItem, PRODUCT_STATUS_LABELS, PRODUCT_STATUS_META } from "@/types/product.type";
 import ProductActions from "./Productactions";
 
-
 interface ProductListProps {
-  products: Product[];
+  products: ProductItem[];
 }
 
-function ProductCard({ product }: { product: Product }) {
-  const meta = statusMeta[product.status];
-  const isOpenDate =
-    product.status === "Open Item" ||
-    product.expireDate.includes("Open");
+function ProductCard({ product }: { product: ProductItem }) {
+  const businessStatus = product.products_status;
+  const meta = PRODUCT_STATUS_META[businessStatus];
+  const label = PRODUCT_STATUS_LABELS[businessStatus];
+  const batchCount = product?.batch_count;
 
   return (
     <article
       className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
       aria-label={product.name}
     >
-      {/* Top row */}
       <div className="flex items-center gap-4 px-5 py-4">
-        {/* Thumbnail */}
         <div
-          className="w-14 h-14 rounded-xl bg-gray-50 flex items-center justify-center text-2xl flex-shrink-0 border border-gray-100"
+          className="w-14 h-14 rounded-xl bg-gray-50 flex items-center justify-center shrink-0 border border-gray-100 overflow-hidden"
           aria-hidden="true"
         >
-          {product.thumbnail}
+          {product.category_image ? (
+            <Image
+              src={product.category_image}
+              alt={product.category_name}
+              width={56}
+              height={56}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="text-xl">📦</span>
+          )}
         </div>
 
-        {/* Name + meta */}
         <div className="flex-1 min-w-0">
           <p className="font-bold text-base" style={{ color: "#1A3340" }}>
             {product.name}
           </p>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             <span className="flex items-center gap-1 text-xs text-gray-500">
-              {/* layers icon */}
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" strokeWidth="1.8"/>
-                <path d="M2 17l10 5 10-5" stroke="currentColor" strokeWidth="1.8"/>
-                <path d="M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.8"/>
-              </svg>
-              {product.category}
+              {product.category_name}
             </span>
             <span className="flex items-center gap-1 text-xs text-gray-500">
-              {/* coin icon */}
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle cx="12" cy="12" r="10" stroke="#3B82F6" strokeWidth="1.8"/>
-                <path d="M12 7v10M9 9.5h4.5a1.5 1.5 0 0 1 0 3H10a1.5 1.5 0 0 0 0 3H15" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-              {product.price}
+              ${product.price}
             </span>
           </div>
         </div>
 
-        {/* Total products + 3-dot */}
-        <div className="flex items-start gap-3 flex-shrink-0">
+        <div className="flex items-start gap-3 shrink-0">
           <div className="text-right">
-            <p className="text-xs text-gray-500">Total Products</p>
+            <p className="text-xs text-gray-500">Quantity</p>
             <p className="text-2xl font-bold leading-tight" style={{ color: "#1A3340" }}>
-              {String(product.totalProducts).padStart(2, "0")}
+              {String(product.quantity).padStart(2, "0")}
             </p>
           </div>
-          {/* Client island — only this part is hydrated */}
           <ProductActions product={product} />
         </div>
       </div>
 
-      {/* Bottom bar */}
       <div
         className="flex items-center justify-between px-5 py-2.5 border-t"
         style={{ borderColor: "#f5f5f5" }}
       >
-        <p className="text-xs font-medium" style={{ color: "#3A7326" }}>
-          {isOpenDate ? "Open Expire Date:" : "Expire Date:"}{" "}
-          <span className="font-semibold">{product.expireDate}</span>
-        </p>
+        <div className="flex items-center gap-4 flex-wrap text-xs">
+          <p className="font-medium" style={{ color: "#3A7326" }}>
+            Batch Count: <span className="font-semibold">{batchCount}</span>
+          </p>
+          <p className="font-medium" style={{ color: "#3A7326" }}>
+            PAO: <span className="font-semibold">{product.track_open_expiry_days ? "Yes":"No"}</span>
+          </p>
+        </div>
+
         <div className="flex items-center gap-1.5">
           <span
-            className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ backgroundColor: meta.dot }}
+            className="w-2 h-2 rounded-full shrink-0"
+            style={{ backgroundColor: meta?.dot }}
             aria-hidden="true"
           />
-          <span className="text-xs font-medium" style={{ color: meta.color }}>
-            {product.status}
+          <span className="text-xs font-medium" style={{ color: meta?.color }}>
+            {label}
           </span>
         </div>
       </div>

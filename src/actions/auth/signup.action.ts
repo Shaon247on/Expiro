@@ -54,7 +54,7 @@ function getJwtExpMs(token: string): number | null {
     const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
 
     const decoded = JSON.parse(
-      Buffer.from(padded, "base64").toString("utf-8")
+      Buffer.from(padded, "base64").toString("utf-8"),
     ) as { exp?: number };
 
     return decoded.exp ? decoded.exp * 1000 : null;
@@ -73,7 +73,9 @@ function getRedirectPathByRole(role: string) {
   return "/dashboard";
 }
 
-export async function signupAction(payload: SignupPayload): Promise<ActionResult> {
+export async function signupAction(
+  payload: SignupPayload,
+): Promise<ActionResult> {
   const name = payload.name?.trim();
   const email = payload.email?.trim();
   const phone = payload.phone?.trim();
@@ -81,7 +83,14 @@ export async function signupAction(payload: SignupPayload): Promise<ActionResult
   const password = payload.password?.trim();
   const confirm_password = payload.confirm_password?.trim();
 
-  if (!name || !email || !phone || !shop_category || !password || !confirm_password) {
+  if (
+    !name ||
+    !email ||
+    !phone ||
+    !shop_category ||
+    !password ||
+    !confirm_password
+  ) {
     return {
       success: false,
       message: "All fields are required.",
@@ -117,9 +126,9 @@ export async function signupAction(payload: SignupPayload): Promise<ActionResult
         },
         withCredentials: true,
         timeout: 15000,
-      }
+      },
     );
-console.log("getting started",response)
+    console.log("getting started", response);
     return {
       success: true,
       message: response.data.detail || "Verification OTP sent successfully.",
@@ -182,17 +191,17 @@ console.log("getting started",response)
 }
 
 export async function verifyOtpAction(
-  payload: VerifyOtpPayload
+  payload: VerifyOtpPayload,
 ): Promise<ActionResult> {
   const email = payload.email?.trim();
   const otp = payload.otp?.trim();
-
   if (!email || !otp) {
     return {
       success: false,
       message: "Email and OTP are required.",
     };
   }
+  console.log("the receivable:", email, otp);
 
   let redirectPath: string | null = null;
 
@@ -210,10 +219,10 @@ export async function verifyOtpAction(
         },
         withCredentials: true,
         timeout: 15000,
-      }
+      },
     );
-    // console.log('OTP Reponse:', response.data)
-    console.log("forgetting response:", response.data)
+    console.log("OTP Reponse:", response.data);
+    // console.log("forgetting response:", response.data)
 
     const data = response.data;
     const access = data?.access;
@@ -284,6 +293,8 @@ export async function verifyOtpAction(
       const serverData = error.response?.data as
         | { detail?: string; message?: string; otp?: string[] }
         | undefined;
+
+      console.log("service data:", serverData);
 
       return {
         success: false,

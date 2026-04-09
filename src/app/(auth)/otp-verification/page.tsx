@@ -21,7 +21,10 @@ import { Field, FieldError } from "@/components/ui/field";
 import { OtpInput } from "@/components/auth/OtpInput";
 import ExpiroLogo from "@/components/elements/Logo";
 import { verifyOtpAction } from "@/actions/auth/signup.action";
-import { resendOtpAction, verifyForgotOtpAction } from "@/actions/auth/forgetPassword.action";
+import {
+  resendOtpAction,
+  verifyForgotOtpAction,
+} from "@/actions/auth/forgetPassword.action";
 
 const schema = z.object({
   otp: z
@@ -39,9 +42,10 @@ export default function OtpVerificationPage() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
   const rawMode = searchParams.get("mode");
-const mode = rawMode?.trim().toLowerCase() ?? "signup";
-const isForgotPasswordMode = mode === "forgot-password";
+  const mode = rawMode?.trim().toLowerCase() ?? "signup";
+  const isForgotPasswordMode = mode === "forgot-password";
 
+  console.log("isForgotPasswordMode", isForgotPasswordMode);
   const [otp, setOtp] = React.useState("");
   const [countdown, setCountdown] = React.useState(RESEND_COOLDOWN);
   const [canResend, setCanResend] = React.useState(false);
@@ -91,80 +95,80 @@ const isForgotPasswordMode = mode === "forgot-password";
   }
 
   function handleResend() {
-  if (!canResend || !email) return;
+    if (!canResend || !email) return;
 
-  startTransition(async () => {
-    const result = await resendOtpAction({ email });
+    startTransition(async () => {
+      const result = await resendOtpAction({ email });
 
-    if (!result.success) {
-      toast.error("Resend failed", {
-        description: result.message,
-      });
-      return;
-    }
-
-    setOtp("");
-    setValue("otp", "");
-    clearErrors("otp");
-    startCountdown();
-
-    toast.success("OTP resent", {
-      description: result.message,
-    });
-  });
-}
-
-  function onSubmit(data: FormValues) {
-  if (!email) {
-    toast.error("Missing email", {
-      description: isForgotPasswordMode
-        ? "Please request forgot password again."
-        : "Please sign up again before verifying OTP.",
-    });
-
-    router.push(isForgotPasswordMode ? "/forgot-password" : "/signup");
-    return;
-  }
-
-  startTransition(async () => {
-    console.log("OTP mode:", mode);
-    console.log("isForgotPasswordMode:", isForgotPasswordMode);
-
-    const result = isForgotPasswordMode
-      ? await verifyForgotOtpAction({
-          email,
-          otp: data.otp,
-        })
-      : await verifyOtpAction({
-          email,
-          otp: data.otp,
+      if (!result.success) {
+        toast.error("Resend failed", {
+          description: result.message,
         });
-
-        console.log("checking the api:",result)
-
-    if (!result.success) {
-      if (result.fieldErrors?.otp?.[0]) {
-        setError("otp", {
-          type: "server",
-          message: result.fieldErrors.otp[0],
-        });
+        return;
       }
 
-      toast.error("OTP verification failed", {
+      setOtp("");
+      setValue("otp", "");
+      clearErrors("otp");
+      startCountdown();
+
+      toast.success("OTP resent", {
         description: result.message,
       });
+    });
+  }
+
+  function onSubmit(data: FormValues) {
+    if (!email) {
+      toast.error("Missing email", {
+        description: isForgotPasswordMode
+          ? "Please request forgot password again."
+          : "Please sign up again before verifying OTP.",
+      });
+
+      router.push(isForgotPasswordMode ? "/forgot-password" : "/signup");
       return;
     }
 
-    toast.success("OTP verified", {
-      description: result.message,
-    });
+    startTransition(async () => {
+      console.log("OTP mode:", mode);
+      console.log("isForgotPasswordMode:", isForgotPasswordMode);
 
-    if (isForgotPasswordMode) {
-      router.push("/new-password");
-    }
-  });
-}
+      const result = isForgotPasswordMode
+        ? await verifyForgotOtpAction({
+            email,
+            otp: data.otp,
+          })
+        : await verifyOtpAction({
+            email,
+            otp: data.otp,
+          });
+
+      console.log("checking the api:", result);
+
+      if (!result.success) {
+        if (result.fieldErrors?.otp?.[0]) {
+          setError("otp", {
+            type: "server",
+            message: result.fieldErrors.otp[0],
+          });
+        }
+
+        toast.error("OTP verification failed", {
+          description: result.message,
+        });
+        return;
+      }
+
+      toast.success("OTP verified", {
+        description: result.message,
+      });
+
+      if (isForgotPasswordMode) {
+        router.push("/new-password");
+      }
+    });
+  }
 
   const hasError = !!errors.otp;
 
@@ -183,7 +187,8 @@ const isForgotPasswordMode = mode === "forgot-password";
         </CardTitle>
 
         <CardDescription className="w-full" style={{ color: "#51564E" }}>
-          We sent a 6-digit code to {email || "your email"}. Enter it below to continue.
+          We sent a 6-digit code to {email || "your email"}. Enter it below to
+          continue.
         </CardDescription>
       </CardHeader>
 

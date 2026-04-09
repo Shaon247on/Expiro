@@ -6,6 +6,7 @@ import Link from "next/link";
 import SettingNav from "./SettingNav";
 
 export default function TopNavbar() {
+  console.log("testing")
   return (
     <header
       className="sticky shadow top-0 z-20 flex items-center gap-4 px-4 sm:px-6 lg:px-8 h-16 bg-white shrink-0"

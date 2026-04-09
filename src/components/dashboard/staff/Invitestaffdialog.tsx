@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
-import { Plus, X, Eye, EyeOff } from "lucide-react";
+import { Plus, X, Loader2 } from "lucide-react";
 
 import {
   Dialog,
@@ -20,13 +20,17 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
+import { inviteStaffAction } from "@/actions/admin/staff.action";
 
 const schema = z.object({
-  name:     z.string().min(2, "Name must be at least 2 characters."),
-  email:    z.string().email("Please enter a valid email."),
-  phone:    z.string().min(6, "Please enter a valid phone number."),
-  password: z.string().min(8, "Password must be at least 8 characters."),
+  name: z.string().min(2, "Name must be at least 2 characters."),
+  email: z.string().email("Please enter a valid email."),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^[\d+-]{8,15}$/, "Phone number must be 8 to 15 characters and can include digits, +, or -."),
 });
+
 type FormValues = z.infer<typeof schema>;
 
 const inputCls =
@@ -35,29 +39,60 @@ const labelCls = "text-sm font-semibold mb-1.5";
 const labelStyle = { color: "#1F485B" };
 
 export default function InviteStaffDialog() {
-  const [open, setOpen]       = useState(false);
-  const [showPw, setShowPw]   = useState(false);
+  const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  const form = useForm<FormValues>({ 
+  const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: "",
       email: "",
       phone: "",
-      password: "",
     },
   });
 
   function onSubmit(data: FormValues) {
-    toast.success(`Invitation sent to ${data.email}`, { position: "bottom-right" });
-    form.reset();
-    setOpen(false);
+    startTransition(async () => {
+      const result = await inviteStaffAction(data);
+
+      if (!result.success) {
+        if (result.fieldErrors?.name?.[0]) {
+          form.setError("name", {
+            type: "server",
+            message: result.fieldErrors.name[0],
+          });
+        }
+        if (result.fieldErrors?.email?.[0]) {
+          form.setError("email", {
+            type: "server",
+            message: result.fieldErrors.email[0],
+          });
+        }
+        if (result.fieldErrors?.phone?.[0]) {
+          form.setError("phone", {
+            type: "server",
+            message: result.fieldErrors.phone[0],
+          });
+        }
+
+        toast.error("Invitation failed", {
+          description: result.message,
+        });
+        return;
+      }
+
+      toast.success("Invitation sent", {
+        description: result.message,
+      });
+
+      form.reset();
+      setOpen(false);
+    });
   }
 
-  function handleClose() {
+  function handleClose(nextOpen = false) {
     form.reset();
-    setShowPw(false);
-    setOpen(false);
+    setOpen(nextOpen);
   }
 
   return (
@@ -76,35 +111,24 @@ export default function InviteStaffDialog() {
           className="p-0 overflow-hidden border-0 shadow-2xl w-full"
           style={{ borderRadius: 16, maxWidth: "min(580px, 95vw)" }}
         >
-          {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <DialogTitle className="text-base font-bold" style={{ color: "#1A3340" }}>
               Add Member
             </DialogTitle>
-            <button
-              onClick={handleClose}
-              className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors"
-              aria-label="Close"
-            >
-              <X size={18} className="text-gray-500" />
-            </button>
           </div>
 
-          {/* Body */}
           <div className="px-8 py-8">
-            {/* Heading */}
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold mb-2" style={{ color: "#1F485B" }}>
                 Invite
               </h2>
               <p className="text-sm text-gray-500">
-                Please enter your email and password to invite to your account.
+                Enter staff details to send an invitation.
               </p>
             </div>
 
             <form id="invite-form" onSubmit={form.handleSubmit(onSubmit)}>
               <FieldGroup className="gap-4">
-                {/* Name */}
                 <Controller
                   name="name"
                   control={form.control}
@@ -119,13 +143,13 @@ export default function InviteStaffDialog() {
                         placeholder="Mohammad AnaYet"
                         aria-invalid={fieldState.invalid}
                         className={inputCls}
+                        disabled={isPending}
                       />
                       {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                     </Field>
                   )}
                 />
 
-                {/* Email */}
                 <Controller
                   name="email"
                   control={form.control}
@@ -141,13 +165,13 @@ export default function InviteStaffDialog() {
                         placeholder="username@gmail.com"
                         aria-invalid={fieldState.invalid}
                         className={inputCls}
+                        disabled={isPending}
                       />
                       {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                     </Field>
                   )}
                 />
 
-                {/* Phone */}
                 <Controller
                   name="phone"
                   control={form.control}
@@ -160,42 +184,11 @@ export default function InviteStaffDialog() {
                         {...field}
                         id="inv-phone"
                         type="tel"
-                        placeholder="+(1234) 456789"
+                        placeholder="+8801700000000"
                         aria-invalid={fieldState.invalid}
                         className={inputCls}
+                        disabled={isPending}
                       />
-                      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                    </Field>
-                  )}
-                />
-
-                {/* Password */}
-                <Controller
-                  name="password"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="inv-pw" className={labelCls} style={labelStyle}>
-                        Password
-                      </FieldLabel>
-                      <div className="relative">
-                        <Input
-                          {...field}
-                          id="inv-pw"
-                          type={showPw ? "text" : "password"}
-                          placeholder="Password"
-                          aria-invalid={fieldState.invalid}
-                          className={`${inputCls} pr-11`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPw((v) => !v)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          aria-label={showPw ? "Hide password" : "Show password"}
-                        >
-                          {showPw ? <Eye size={17} /> : <EyeOff size={17} />}
-                        </button>
-                      </div>
                       {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                     </Field>
                   )}
@@ -203,14 +196,21 @@ export default function InviteStaffDialog() {
               </FieldGroup>
             </form>
 
-            {/* Submit */}
             <Button
               type="submit"
               form="invite-form"
+              disabled={isPending}
               className="w-full h-12 rounded-2xl text-base font-semibold mt-6"
               style={{ backgroundColor: "#3A7326", color: "white" }}
             >
-              Invite
+              {isPending ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 size={16} className="animate-spin" />
+                  Inviting...
+                </span>
+              ) : (
+                "Invite"
+              )}
             </Button>
           </div>
         </DialogContent>
