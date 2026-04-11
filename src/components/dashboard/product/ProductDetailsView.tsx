@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import {
   ProductItem,
@@ -18,7 +20,7 @@ function DetailLine({
   return (
     <div className="flex items-baseline gap-2">
       <span
-        className="text-sm font-semibold shrink-0"
+        className="shrink-0 text-sm font-semibold"
         style={{ color: "#1A3340" }}
       >
         {label}
@@ -32,9 +34,9 @@ function DetailLine({
 
 function getBatchStatusMeta(status: string) {
   switch (status?.toLowerCase()) {
-    case "available":
+    case "active":
       return {
-        label: "Available",
+        label: "Active",
         text: "#15803D",
         bg: "#DCFCE7",
       };
@@ -44,23 +46,11 @@ function getBatchStatusMeta(status: string) {
         text: "#2563EB",
         bg: "#DBEAFE",
       };
-    case "sold_out":
-      return {
-        label: "Sold Out",
-        text: "#7C3AED",
-        bg: "#EDE9FE",
-      };
     case "removed":
       return {
         label: "Removed",
         text: "#DC2626",
         bg: "#FEE2E2",
-      };
-    case "expired":
-      return {
-        label: "Expired",
-        text: "#EA580C",
-        bg: "#FFEDD5",
       };
     default:
       return {
@@ -71,11 +61,12 @@ function getBatchStatusMeta(status: string) {
   }
 }
 
-export default function ProductDetailsView({
-  product,
-}: {
+type Props = {
   product: ProductItem;
-}) {
+  onBatchView?: (batchId: string) => void;
+};
+
+export default function ProductDetailsView({ product, onBatchView }: Props) {
   const productStatusLabel = PRODUCT_STATUS_LABELS[product.products_status];
   const productStatusMeta = PRODUCT_STATUS_META[product.products_status];
   const batchStatusMeta = getBatchStatusMeta(product.status);
@@ -84,17 +75,17 @@ export default function ProductDetailsView({
     <div className="flex flex-col gap-6">
       <h1 className="text-3xl font-semibold">Product Details</h1>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         <div className="flex flex-col lg:flex-row">
-          <div className="p-6 lg:w-65 border-b lg:border-b-0 lg:border-r border-gray-100">
-            <div className="w-full h-44 rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 flex items-center justify-center">
+          <div className="border-b border-gray-100 p-6 lg:w-65 lg:border-b-0 lg:border-r">
+            <div className="flex h-44 w-full items-center justify-center overflow-hidden rounded-2xl border border-gray-100 bg-gray-50">
               {product.category_image ? (
                 <Image
                   src={product.category_image}
                   alt={product.category_name}
                   width={260}
                   height={176}
-                  className="w-full h-full object-cover"
+                  className="h-full w-full object-cover"
                 />
               ) : (
                 <span className="text-5xl">📦</span>
@@ -103,12 +94,12 @@ export default function ProductDetailsView({
           </div>
 
           <div className="flex-1 p-6">
-            <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-bold" style={{ color: "#1A3340" }}>
                   {product.name}
                 </h1>
-                <p className="text-sm mt-1" style={{ color: "#51564E" }}>
+                <p className="mt-1 text-sm" style={{ color: "#51564E" }}>
                   Category:{" "}
                   <span className="font-medium">{product.category_name}</span>
                 </p>
@@ -116,19 +107,19 @@ export default function ProductDetailsView({
 
               <div className="flex items-center gap-1.5">
                 <span
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: productStatusMeta.dot }}
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: productStatusMeta?.dot }}
                 />
                 <span
                   className="text-sm font-medium"
-                  style={{ color: productStatusMeta.color }}
+                  style={{ color: productStatusMeta?.color }}
                 >
                   {productStatusLabel}
                 </span>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6">
+            <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
               <DetailLine label="Barcode:" value={product.barcode} />
               <DetailLine label="Quantity:" value={product.quantity} />
               <DetailLine label="Price:" value={`$${product.price}`} />
@@ -136,7 +127,7 @@ export default function ProductDetailsView({
               <DetailLine label="Expiry Date:" value={product.expiry_date} />
               <DetailLine
                 label="PAO:"
-                value={product.track_open_expiry_days ? "Yes":"No"}
+                value={product.track_open_expiry_days ? "Yes" : "No"}
               />
               <DetailLine
                 label="Open Expiry Days:"
@@ -150,7 +141,7 @@ export default function ProductDetailsView({
 
               <div className="flex items-center gap-2">
                 <span
-                  className="text-sm font-semibold shrink-0"
+                  className="shrink-0 text-sm font-semibold"
                   style={{ color: "#1A3340" }}
                 >
                   Status:
@@ -170,7 +161,7 @@ export default function ProductDetailsView({
             {product.description && (
               <div className="mt-6">
                 <p
-                  className="text-sm font-semibold mb-1"
+                  className="mb-1 text-sm font-semibold"
                   style={{ color: "#1A3340" }}
                 >
                   Description
@@ -184,7 +175,7 @@ export default function ProductDetailsView({
         </div>
       </div>
 
-      <BatchTable batches={product.batches} productId={product.id} />
+       <BatchTable productId={product.id} batches={product.batches} onView={onBatchView} />
     </div>
   );
 }

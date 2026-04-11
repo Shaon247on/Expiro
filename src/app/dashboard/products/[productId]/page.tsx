@@ -17,5 +17,5 @@ export default async function ProductDetailsPage({
     );
   }
 
-  return <ProductDetailsView product={result.data} />;
+  return <ProductDetailsView product={result.data}/>;
 }
