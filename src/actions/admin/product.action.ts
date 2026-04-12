@@ -9,6 +9,7 @@ import type {
   ProductDetailsResponse,
   ProductItem,
   ProductListResponse,
+  ProductScanResponse,
 } from "@/types/product.type";
 
 type ActionResult<T = undefined> =
@@ -18,6 +19,54 @@ type ActionResult<T = undefined> =
       message: string;
       fieldErrors?: Record<string, string[] | undefined>;
     };
+
+type ScanActionResult =
+  | {
+      success: true;
+      message: string;
+      data: ProductScanResponse;
+    }
+  | {
+      success: false;
+      message: string;
+    };
+
+export async function scanProductByBarcodeAction(
+  barcode: string,
+): Promise<ScanActionResult> {
+  try {
+    const api = await createBackendClient();
+
+    const { data } = await api.get<ProductScanResponse>(
+      `/api/products/scan/?barcode=${encodeURIComponent(barcode)}`,
+    );
+
+    return {
+      success: true,
+      message: data.message,
+      data,
+    };
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      const serverData = error.response?.data as
+        | { message?: string; detail?: string }
+        | undefined;
+
+      return {
+        success: false,
+        message:
+          serverData?.message ||
+          serverData?.detail ||
+          "Failed to scan product barcode.",
+      };
+    }
+
+    return {
+      success: false,
+      message: "Something went wrong while scanning the product barcode.",
+    };
+  }
+}
 
 export async function getProductsAction(params?: {
   page?: number;
@@ -30,7 +79,7 @@ export async function getProductsAction(params?: {
     if (params?.status) query.set("status", params.status);
 
     const { data } = await api.get<ProductListResponse>(
-      `/api/products/?${query.toString()}`
+      `/api/products/?${query.toString()}`,
     );
 
     return {
@@ -47,20 +96,28 @@ export async function getProductsAction(params?: {
 
       return {
         success: false,
-        message: serverData?.message || serverData?.detail || "Failed to fetch products.",
+        message:
+          serverData?.message ||
+          serverData?.detail ||
+          "Failed to fetch products.",
       };
     }
 
-    return { success: false, message: "Something went wrong while fetching products." };
+    return {
+      success: false,
+      message: "Something went wrong while fetching products.",
+    };
   }
 }
 
 export async function getProductDetailsAction(
-  id: string
+  id: string,
 ): Promise<ActionResult<ProductItem>> {
   try {
     const api = await createBackendClient();
-    const { data } = await api.get<ProductDetailsResponse>(`/api/products/${id}/`);
+    const { data } = await api.get<ProductDetailsResponse>(
+      `/api/products/${id}/`,
+    );
 
     return {
       success: true,
@@ -74,11 +131,17 @@ export async function getProductDetailsAction(
         | undefined;
       return {
         success: false,
-        message: serverData?.message || serverData?.detail || "Failed to fetch product details.",
+        message:
+          serverData?.message ||
+          serverData?.detail ||
+          "Failed to fetch product details.",
       };
     }
 
-    return { success: false, message: "Something went wrong while fetching product details." };
+    return {
+      success: false,
+      message: "Something went wrong while fetching product details.",
+    };
   }
 }
 
@@ -86,7 +149,7 @@ export async function getBatchDetailsAction(batchId: string) {
   try {
     const api = await createBackendClient();
     const { data } = await api.get<BatchDetailsResponse>(
-      `/api/product-batches/${batchId}/`
+      `/api/product-batches/${batchId}/`,
     );
     return { success: true as const, message: data.message, data: data.data };
   } catch (error: unknown) {
@@ -96,10 +159,16 @@ export async function getBatchDetailsAction(batchId: string) {
         | undefined;
       return {
         success: false as const,
-        message: serverData?.message || serverData?.detail || "Failed to fetch batch details.",
+        message:
+          serverData?.message ||
+          serverData?.detail ||
+          "Failed to fetch batch details.",
       };
     }
-    return { success: false as const, message: "Something went wrong while fetching batch details." };
+    return {
+      success: false as const,
+      message: "Something went wrong while fetching batch details.",
+    };
   }
 }
 
@@ -126,7 +195,7 @@ export async function createProductAction(payload: {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-      }
+      },
     );
 
     revalidatePath("/dashboard/products");
@@ -147,7 +216,10 @@ export async function createProductAction(payload: {
         fieldErrors: serverData?.errors,
       };
     }
-    return { success: false, message: "Something went wrong while creating product." };
+    return {
+      success: false,
+      message: "Something went wrong while creating product.",
+    };
   }
 }
 
@@ -165,7 +237,7 @@ export async function updateProductAction(
     confirm_labels_printed: boolean;
     price: string;
     description?: string;
-  }
+  },
 ): Promise<ActionResult<ProductItem>> {
   try {
     const api = await createBackendClient();
@@ -177,7 +249,7 @@ export async function updateProductAction(
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-      }
+      },
     );
 
     revalidatePath("/dashboard/products");
@@ -199,18 +271,26 @@ export async function updateProductAction(
         fieldErrors: serverData?.errors,
       };
     }
-    return { success: false, message: "Something went wrong while updating product." };
+    return {
+      success: false,
+      message: "Something went wrong while updating product.",
+    };
   }
 }
 
 export async function deleteProductAction(id: string): Promise<ActionResult> {
   try {
     const api = await createBackendClient();
-    const { data } = await api.delete<{ message: string }>(`/api/products/${id}/`);
+    const { data } = await api.delete<{ message: string }>(
+      `/api/products/${id}/`,
+    );
 
     revalidatePath("/dashboard/products");
 
-    return { success: true, message: data.message || "Product removed successfully." };
+    return {
+      success: true,
+      message: data.message || "Product removed successfully.",
+    };
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
       const serverData = error.response?.data as
@@ -219,9 +299,15 @@ export async function deleteProductAction(id: string): Promise<ActionResult> {
 
       return {
         success: false,
-        message: serverData?.message || serverData?.detail || "Failed to delete product.",
+        message:
+          serverData?.message ||
+          serverData?.detail ||
+          "Failed to delete product.",
       };
     }
-    return { success: false, message: "Something went wrong while deleting product." };
+    return {
+      success: false,
+      message: "Something went wrong while deleting product.",
+    };
   }
 }

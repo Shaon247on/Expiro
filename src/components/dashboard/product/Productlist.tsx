@@ -71,6 +71,9 @@ function ProductCard({ product }: { product: ProductItem }) {
           <p className="font-medium" style={{ color: "#3A7326" }}>
             PAO: <span className="font-semibold">{product.track_open_expiry_days ? "Yes":"No"}</span>
           </p>
+          <p className="font-medium" style={{ color: "#3A7326" }}>
+            Barcode: <span className="font-semibold">{product.barcode}</span>
+          </p>
         </div>
 
         <div className="flex items-center gap-1.5">

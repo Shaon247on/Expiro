@@ -100,3 +100,66 @@ export const PRODUCT_STATUS_META: Record<
   remove_item: { dot: "#DC2626", color: "#DC2626" },
   open_item: { dot: "#15803D", color: "#15803D" },
 };
+
+
+//existing product
+
+export type ProductScanExistingResponse = {
+  success: true;
+  type: "existing";
+  message: string;
+  product: {
+    id: string;
+    name: string;
+    barcode: string;
+    price: string;
+    category: string;
+    category_name: string;
+    status: string;
+    products_status: string;
+    expiry_date: string;
+    batches: Array<{
+      id: string;
+      batch_code: string;
+      received_quantity: number;
+      available_quantity: number;
+      purchase_date: string;
+      expiry_date: string;
+      status: string;
+      unit_price: string;
+      created_at: string;
+      updated_at: string;
+      unit_labels?: Array<{
+        id: string;
+        unit_number: number;
+        unique_barcode: string;
+        status?: string;
+      }>;
+    }>;
+  };
+};
+
+export type ScannedProductPrefill = {
+  barcode: string;
+  existingProduct: boolean;
+  lockedFields?: {
+    productId: string;
+    categoryId: string;
+    categoryName: string;
+    name: string;
+    barcode: string;
+    track_open_expiry_days: boolean;
+    open_expiry_days: number | null;
+  };
+};
+
+export type ProductScanNewResponse = {
+  success: true;
+  type: "new";
+  message: string;
+  barcode: string;
+};
+
+export type ProductScanResponse =
+  | ProductScanExistingResponse
+  | ProductScanNewResponse;

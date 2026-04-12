@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
-import { ScanLine, Plus, Printer, CheckCircle2 } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,10 +30,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import BarcodeScanner from "./BarcodeScanner";
 import BarcodePrintSheet from "./BarcodePrintSheet";
 
-// ── Zod Schema ────────────────────────────────────────────────────────────────
+import { getCategoriesAction } from "@/actions/admin/category.action";
+import { createProductAction } from "@/actions/admin/product.action";
+import type { CategoryApiItem } from "@/types/category.type";
+
+// ── Schema ───────────────────────────────────────────────────────────────────
 
 export const schema = z
   .object({
@@ -58,37 +61,104 @@ export const schema = z
 
 export type FormValues = z.infer<typeof schema>;
 
-const CATEGORIES = [
-  "Daily",
-  "Bakery",
-  "Meat",
-  "Seafood",
-  "Dairy",
-  "Frozen",
-  "Beverages",
-  "Other",
-];
-
 const inputCls =
   "bg-white border border-gray-200 rounded-xl h-10 px-3 text-sm w-full focus:outline-none focus:ring-2 focus:ring-green-300 transition-all placeholder:text-gray-400";
 const labelCls = "text-xs font-semibold mb-1.5";
 const labelStyle = { color: "#3A7326" };
 
-// ── Component ─────────────────────────────────────────────────────────────────
-
 interface AddProductDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialPrefill?: {
+    barcode: string;
+    existingProduct: boolean;
+    lockedFields?: {
+      productId: string;
+      categoryId: string;
+      categoryName: string;
+      name: string;
+      barcode: string;
+      track_open_expiry_days: boolean;
+      open_expiry_days: number | null;
+    };
+  } | null;
+}
+
+type LockedScanProduct = {
+  productId: string;
+  categoryId: string;
+  categoryName: string;
+  name: string;
+  barcode: string;
+  track_open_expiry_days: boolean;
+  open_expiry_days: number | null;
+};
+
+type PrintPayload = {
+  productName: string;
+  batchCode: string;
+  labels: {
+    id: string;
+    unit_number: number;
+    unique_barcode: string;
+    status?: string;
+  }[];
+} | null;
+
+function extractPrintPayload(product: unknown): PrintPayload {
+  const p = product as
+    | {
+        name?: string;
+        batch_code?: string;
+        unit_labels?: Array<{
+          id: string;
+          unit_number: number;
+          unique_barcode: string;
+          status?: string;
+        }>;
+        batches?: Array<{
+          batch_code?: string;
+          unit_labels?: Array<{
+            id: string;
+            unit_number: number;
+            unique_barcode: string;
+            status?: string;
+          }>;
+        }>;
+      }
+    | undefined;
+
+  const firstBatch = p?.batches?.[0];
+
+  const labels = firstBatch?.unit_labels ?? p?.unit_labels ?? [];
+  const batchCode = firstBatch?.batch_code ?? p?.batch_code ?? "BATCH";
+
+  if (!p?.name || !labels?.length) {
+    return null;
+  }
+
+  return {
+    productName: p.name,
+    batchCode,
+    labels,
+  };
 }
 
 export default function AddProductDrawer({
   open,
   onOpenChange,
+  initialPrefill = null,
 }: AddProductDrawerProps) {
-  const [showScanner, setShowScanner] = useState(false);
   const [openExpiryEnabled, setOpenExpiryEnabled] = useState(false);
-  const [labelsHavePrinted, setLabelsHavePrinted] = useState(false);
+  const [categories, setCategories] = useState<CategoryApiItem[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [lockedScanProduct, setLockedScanProduct] =
+    useState<LockedScanProduct | null>(null);
+
   const [printSheetOpen, setPrintSheetOpen] = useState(false);
+  const [printPayload, setPrintPayload] = useState<PrintPayload>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -105,84 +175,160 @@ export default function AddProductDrawer({
     },
   });
 
-  const watchedQuantity = form.watch("quantity");
-  const watchedBarcode = form.watch("barcode");
   const watchedName = form.watch("itemName");
+  const fieldsLocked = !!lockedScanProduct;
 
-  const canSubmit = !openExpiryEnabled || labelsHavePrinted;
+  const loadCategories = useCallback(async () => {
+    setCategoriesLoading(true);
 
-  // ── Checkbox toggle ────────────────────────────────────────────────────────
+    const result = await getCategoriesAction({ page: 1 });
+
+    if (result.success && result.data) {
+      setCategories(result.data);
+    } else if (!result.success) {
+      toast.error("Failed to load categories", {
+        description: result.message,
+      });
+    }
+
+    setCategoriesLoading(false);
+  }, []);
+
   const handleOpenExpiryToggle = useCallback(
     (checked: boolean) => {
       setOpenExpiryEnabled(checked);
-      setLabelsHavePrinted(false);
-      if (!checked) form.setValue("openExpiryDays", "");
+      if (!checked) {
+        form.setValue("openExpiryDays", "");
+      }
     },
-    [form],
+    [form]
   );
 
-  // ── Barcode scanner ────────────────────────────────────────────────────────
-  function handleBarcodeDetected(code: string) {
-    form.setValue("barcode", code, { shouldValidate: true });
-    setShowScanner(false);
-    toast("Barcode scanned!", {
-      description: `Code: ${code}`,
-      position: "bottom-right",
-    });
-  }
+  useEffect(() => {
+    if (!open) return;
 
-  // ── Close / reset ──────────────────────────────────────────────────────────
+    void loadCategories();
+
+    form.reset({
+      categoryType: "",
+      itemName: "",
+      barcode: "",
+      quantity: 1,
+      datePurchased: "",
+      dateExpire: "",
+      openExpiryDays: "",
+      price: 0,
+      description: "",
+    });
+
+    setOpenExpiryEnabled(false);
+    setLockedScanProduct(null);
+
+    if (initialPrefill?.existingProduct && initialPrefill.lockedFields) {
+      const locked = initialPrefill.lockedFields;
+
+      form.setValue("barcode", locked.barcode, { shouldValidate: true });
+      form.setValue("itemName", locked.name, { shouldValidate: true });
+      form.setValue("categoryType", locked.categoryId, { shouldValidate: true });
+      form.setValue("openExpiryDays", locked.open_expiry_days ?? "", {
+        shouldValidate: true,
+      });
+
+      setOpenExpiryEnabled(locked.track_open_expiry_days);
+      setLockedScanProduct(locked);
+    } else if (initialPrefill?.barcode) {
+      form.setValue("barcode", initialPrefill.barcode, {
+        shouldValidate: true,
+        shouldDirty: false,
+      });
+    }
+  }, [open, initialPrefill, form, loadCategories]);
+
   function handleClose() {
     form.reset();
-    setShowScanner(false);
     setOpenExpiryEnabled(false);
-    setLabelsHavePrinted(false);
-    setPrintSheetOpen(false);
+    setLockedScanProduct(null);
     onOpenChange(false);
   }
 
-  // ── Submit ─────────────────────────────────────────────────────────────────
-  function onSubmit(data: FormValues) {
-    if (openExpiryEnabled && !labelsHavePrinted) {
-      toast.error("Please print the barcode labels first.", {
-        position: "bottom-right",
+  async function onSubmit(data: FormValues) {
+    setSubmitting(true);
+
+    const payload = {
+      category: data.categoryType,
+      name: data.itemName,
+      barcode: data.barcode || "",
+      quantity: Number(data.quantity),
+      purchase_date: data.datePurchased,
+      expiry_date: data.dateExpire,
+      track_open_expiry_days: openExpiryEnabled,
+      open_expiry_days: openExpiryEnabled
+        ? Number(data.openExpiryDays || 0)
+        : null,
+      confirm_labels_printed: false,
+      price: String(data.price),
+      description: data.description || "",
+    };
+
+    const result = await createProductAction(payload);
+
+    if (!result.success) {
+      Object.entries(result.fieldErrors ?? {}).forEach(([key, value]) => {
+        const msg = value?.[0];
+        if (!msg) return;
+
+        const fieldMap: Record<string, keyof FormValues | null> = {
+          category: "categoryType",
+          name: "itemName",
+          barcode: "barcode",
+          quantity: "quantity",
+          purchase_date: "datePurchased",
+          expiry_date: "dateExpire",
+          open_expiry_days: "openExpiryDays",
+          price: "price",
+          description: "description",
+        };
+
+        const mapped = fieldMap[key];
+        if (mapped) {
+          form.setError(mapped, { type: "server", message: msg });
+        }
       });
+
+      toast.error("Product creation failed", {
+        description: result.message,
+      });
+
+      setSubmitting(false);
       return;
     }
-    toast("Product added!", {
-      description: (
-        <pre>
-          {/* <code>{JSON.stringify(data, null, 2)}</code> */}
-          Product added
-        </pre>
-      ),
-      position: "bottom-right",
+
+    toast.success("Product created", {
+      description: result.message,
     });
+
+    const shouldPrint = openExpiryEnabled;
+    const createdProduct = result.data;
+    const nextPrintPayload = shouldPrint
+      ? extractPrintPayload(createdProduct)
+      : null;
+
     handleClose();
-  }
 
-  // ── Print sheet ────────────────────────────────────────────────────────────
-  function handleOpenPrintSheet() {
-    form.trigger(["quantity", "itemName"]).then((valid) => {
-      if (!valid) return;
-      const qty = Number(form.getValues("quantity"));
-      if (!qty || qty < 1) {
-        form.setError("quantity", { message: "Enter a valid quantity first." });
-        return;
-      }
+    if (shouldPrint && nextPrintPayload) {
+      setPrintPayload(nextPrintPayload);
       setPrintSheetOpen(true);
-    });
+    }
+
+    setSubmitting(false);
   }
 
-  function handlePrinted() {
-    setLabelsHavePrinted(true);
-    setPrintSheetOpen(false);
-    toast.success("Labels printed! You can now save the product.", {
-      position: "bottom-right",
-    });
-  }
+  const selectedCategoryName = useMemo(() => {
+    const selectedId = form.watch("categoryType");
+    const matched = categories.find((c) => c.id === selectedId);
+    return matched?.name ?? lockedScanProduct?.categoryName ?? "";
+  }, [categories, form, lockedScanProduct]);
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
       <Sheet open={open} onOpenChange={handleClose}>
@@ -194,7 +340,6 @@ export default function AddProductDrawer({
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
-          {/* Header */}
           <SheetHeader className="shrink-0 flex flex-row items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
             <SheetTitle
               className="text-lg font-bold"
@@ -204,11 +349,24 @@ export default function AddProductDrawer({
             </SheetTitle>
           </SheetHeader>
 
-          {/* Scrollable body */}
           <div className="flex-1 overflow-y-auto px-6 py-5">
             <form id="add-product-form" onSubmit={form.handleSubmit(onSubmit)}>
               <FieldGroup>
-                {/* Row 1: Category + Item Name */}
+                {fieldsLocked && (
+                  <div
+                    className="rounded-2xl px-4 py-3 text-[12px]"
+                    style={{
+                      backgroundColor: "#EEF3EA",
+                      border: "1px solid #D4EAC8",
+                      color: "#2F5E20",
+                    }}
+                  >
+                    Matched existing product. Category, product name, barcode,
+                    open expiry tracking, and open expiry days have been
+                    locked.
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Controller
                     name="categoryType"
@@ -222,31 +380,41 @@ export default function AddProductDrawer({
                         >
                           Category Type <span className="text-red-500">*</span>
                         </FieldLabel>
+
                         <Select
                           value={field.value}
                           onValueChange={field.onChange}
+                          disabled={fieldsLocked || categoriesLoading}
                         >
                           <SelectTrigger
                             id="cat-type"
                             aria-invalid={fieldState.invalid}
                             className="h-10 rounded-xl border-gray-200 text-sm"
                           >
-                            <SelectValue placeholder="Select category" />
+                            <SelectValue
+                              placeholder={
+                                categoriesLoading
+                                  ? "Loading categories..."
+                                  : "Select category"
+                              }
+                            />
                           </SelectTrigger>
                           <SelectContent>
-                            {CATEGORIES.map((c) => (
-                              <SelectItem key={c} value={c}>
-                                {c}
+                            {categories.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
+
                         {fieldState.invalid && (
                           <FieldError errors={[fieldState.error]} />
                         )}
                       </Field>
                     )}
                   />
+
                   <Controller
                     name="itemName"
                     control={form.control}
@@ -265,6 +433,7 @@ export default function AddProductDrawer({
                           placeholder="Organic Milk"
                           aria-invalid={fieldState.invalid}
                           className={inputCls}
+                          disabled={fieldsLocked}
                         />
                         {fieldState.invalid && (
                           <FieldError errors={[fieldState.error]} />
@@ -274,7 +443,6 @@ export default function AddProductDrawer({
                   />
                 </div>
 
-                {/* Row 2: Barcode + Quantity */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Controller
                     name="barcode"
@@ -288,47 +456,20 @@ export default function AddProductDrawer({
                         >
                           Barcode
                         </FieldLabel>
-                        <div className="flex flex-col gap-2">
-                          <div className="relative">
-                            <Input
-                              {...field}
-                              id="barcode"
-                              placeholder="Scan or enter barcode"
-                              className={`${inputCls} pr-10`}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowScanner((v) => !v)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70"
-                              aria-label="Toggle barcode scanner"
-                            >
-                              <ScanLine
-                                size={17}
-                                style={{ color: "#3A7326" }}
-                              />
-                            </button>
-                          </div>
-                          {showScanner && (
-                            <div
-                              className="rounded-2xl p-3 mt-1"
-                              style={{
-                                backgroundColor: "#F8FDF6",
-                                border: "1px solid #D4EAC8",
-                              }}
-                            >
-                              <BarcodeScanner
-                                onDetected={handleBarcodeDetected}
-                                onClose={() => setShowScanner(false)}
-                              />
-                            </div>
-                          )}
-                        </div>
+                        <Input
+                          {...field}
+                          id="barcode"
+                          placeholder="Scanned or entered barcode"
+                          className={inputCls}
+                          disabled={fieldsLocked}
+                        />
                         {fieldState.invalid && (
                           <FieldError errors={[fieldState.error]} />
                         )}
                       </Field>
                     )}
                   />
+
                   <Controller
                     name="quantity"
                     control={form.control}
@@ -350,10 +491,6 @@ export default function AddProductDrawer({
                           aria-invalid={fieldState.invalid}
                           className={inputCls}
                           value={field.value ?? ""}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            if (openExpiryEnabled) setLabelsHavePrinted(false);
-                          }}
                         />
                         {fieldState.invalid && (
                           <FieldError errors={[fieldState.error]} />
@@ -363,7 +500,6 @@ export default function AddProductDrawer({
                   />
                 </div>
 
-                {/* Row 3: Date Purchased + Date Expire */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Controller
                     name="datePurchased"
@@ -391,6 +527,7 @@ export default function AddProductDrawer({
                       </Field>
                     )}
                   />
+
                   <Controller
                     name="dateExpire"
                     control={form.control}
@@ -418,23 +555,30 @@ export default function AddProductDrawer({
                   />
                 </div>
 
-                {/* ── Open Expiry section ─────────────────────────────────── */}
                 <div className="space-y-3">
-                  {/* Toggle checkbox card */}
                   <div
                     className="flex items-start gap-3 rounded-2xl px-4 py-3.5 cursor-pointer transition-all duration-150"
                     style={{
                       backgroundColor: openExpiryEnabled
                         ? "#EEF3EA"
                         : "#FAFAFA",
-                      border: `1.5px solid ${openExpiryEnabled ? "#D4EAC8" : "#E5E7EB"}`,
+                      border: `1.5px solid ${
+                        openExpiryEnabled ? "#D4EAC8" : "#E5E7EB"
+                      }`,
                     }}
-                    onClick={() => handleOpenExpiryToggle(!openExpiryEnabled)}
+                    onClick={() => {
+                      if (fieldsLocked) return;
+                      handleOpenExpiryToggle(!openExpiryEnabled);
+                    }}
                   >
                     <Checkbox
                       id="open-expiry-toggle"
                       checked={openExpiryEnabled}
-                      onCheckedChange={(v) => handleOpenExpiryToggle(!!v)}
+                      disabled={fieldsLocked}
+                      onCheckedChange={(v) => {
+                        if (fieldsLocked) return;
+                        handleOpenExpiryToggle(!!v);
+                      }}
                       onClick={(e) => e.stopPropagation()}
                       className="mt-0.5 shrink-0 data-[state=checked]:bg-[#3A7326] data-[state=checked]:border-[#3A7326]"
                     />
@@ -446,13 +590,12 @@ export default function AddProductDrawer({
                         Track open expiry days
                       </p>
                       <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
-                        Generates numbered barcode labels per unit — must be
-                        printed before saving.
+                        After product creation, barcode labels will be generated
+                        for printing.
                       </p>
                     </div>
                   </div>
 
-                  {/* Days input */}
                   <Controller
                     name="openExpiryDays"
                     control={form.control}
@@ -472,6 +615,7 @@ export default function AddProductDrawer({
                             <span className="text-red-500 ml-0.5">*</span>
                           )}
                         </FieldLabel>
+
                         <div className="relative">
                           <Input
                             {...field}
@@ -479,13 +623,13 @@ export default function AddProductDrawer({
                             type="number"
                             min={0}
                             placeholder="e.g. 7"
-                            disabled={!openExpiryEnabled}
-                            className={`${inputCls} pr-12 ${!openExpiryEnabled ? "bg-gray-50 text-gray-400 cursor-not-allowed" : ""}`}
+                            disabled={!openExpiryEnabled || fieldsLocked}
+                            className={`${inputCls} pr-12 ${
+                              !openExpiryEnabled || fieldsLocked
+                                ? "bg-gray-50 text-gray-400 cursor-not-allowed"
+                                : ""
+                            }`}
                             value={field.value ?? ""}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              setLabelsHavePrinted(false);
-                            }}
                           />
                           <span
                             className="absolute right-3 top-1/2 -translate-y-1/2 text-xs pointer-events-none"
@@ -496,86 +640,15 @@ export default function AddProductDrawer({
                             Days
                           </span>
                         </div>
+
                         {fieldState.invalid && openExpiryEnabled && (
                           <FieldError errors={[fieldState.error]} />
                         )}
                       </Field>
                     )}
                   />
-
-                  {/* Print gate */}
-                  {openExpiryEnabled && (
-                    <div
-                      className="rounded-2xl overflow-hidden transition-all duration-200"
-                      style={{
-                        border: `1.5px solid ${labelsHavePrinted ? "#BBF7D0" : "#FDE68A"}`,
-                        backgroundColor: labelsHavePrinted
-                          ? "#F0FDF4"
-                          : "#FFFBEB",
-                      }}
-                    >
-                      <div className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
-                        <div className="flex-1 min-w-0">
-                          {labelsHavePrinted ? (
-                            <div className="flex items-center gap-2">
-                              <CheckCircle2
-                                size={15}
-                                style={{ color: "#16A34A" }}
-                                className="shrink-0"
-                              />
-                              <div>
-                                <p
-                                  className="text-[13px] font-semibold"
-                                  style={{ color: "#15803D" }}
-                                >
-                                  {Number(watchedQuantity)} label
-                                  {Number(watchedQuantity) !== 1 ? "s" : ""}{" "}
-                                  printed ✓
-                                </p>
-                                <p
-                                  className="text-[11px]"
-                                  style={{ color: "#16A34A" }}
-                                >
-                                  Product is ready to save.
-                                </p>
-                              </div>
-                            </div>
-                          ) : (
-                            <div>
-                              <p
-                                className="text-[13px] font-semibold"
-                                style={{ color: "#92400E" }}
-                              >
-                                {Number(watchedQuantity) || 0} barcode label
-                                {Number(watchedQuantity) !== 1 ? "s" : ""}{" "}
-                                required
-                              </p>
-                              <p className="text-[11px] text-amber-700">
-                                Print and attach labels before saving.
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                        <Button
-                          type="button"
-                          onClick={handleOpenPrintSheet}
-                          className="h-9 px-4 rounded-xl text-[12px] font-semibold border-0 shrink-0 whitespace-nowrap"
-                          style={{
-                            backgroundColor: labelsHavePrinted
-                              ? "#3A7326"
-                              : "#D97706",
-                            color: "white",
-                          }}
-                        >
-                          <Printer size={13} className="mr-1.5" />
-                          {labelsHavePrinted ? "Re-print" : "Print Labels"}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
-                {/* Price */}
                 <Controller
                   name="price"
                   control={form.control}
@@ -611,7 +684,6 @@ export default function AddProductDrawer({
                   )}
                 />
 
-                {/* Description */}
                 <Controller
                   name="description"
                   control={form.control}
@@ -650,14 +722,8 @@ export default function AddProductDrawer({
             </form>
           </div>
 
-          {/* Footer */}
           <SheetFooter className="shrink-0 flex flex-row items-center justify-between gap-3 px-6 py-4 border-t border-gray-100 bg-white">
-            {openExpiryEnabled && !labelsHavePrinted && (
-              <p className="text-[11px] text-amber-600 flex items-center gap-1.5 min-w-0 truncate">
-                <Printer size={12} className="shrink-0" />
-                Print labels to enable saving
-              </p>
-            )}
+            <div />
             <div className="flex items-center gap-3 ml-auto shrink-0">
               <Button
                 type="button"
@@ -668,28 +734,30 @@ export default function AddProductDrawer({
               >
                 Cancel
               </Button>
+
               <Button
                 type="submit"
                 form="add-product-form"
-                disabled={!canSubmit}
-                title={!canSubmit ? "Print barcode labels first" : undefined}
+                disabled={submitting}
                 className="h-10 px-7 rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ backgroundColor: "#3A7326", color: "white" }}
               >
-                <Plus size={15} className="mr-1.5" /> Add
+                <Plus size={15} className="mr-1.5" />
+                {submitting ? "Adding..." : "Add"}
               </Button>
             </div>
           </SheetFooter>
         </SheetContent>
       </Sheet>
 
-      {/* Barcode print sheet modal */}
       <BarcodePrintSheet
         open={printSheetOpen}
-        itemName={watchedName || "Product"}
-        quantity={Math.max(1, Number(watchedQuantity) || 1)}
-        baseBarcode={watchedBarcode || "ITEM"}
-        onPrinted={handlePrinted}
+        productName={printPayload?.productName ?? (watchedName || "Product")}
+        batchCode={printPayload?.batchCode ?? "BATCH"}
+        labels={printPayload?.labels ?? []}
+        onPrinted={() => {
+          toast.success("Labels printed successfully.");
+        }}
         onClose={() => setPrintSheetOpen(false)}
       />
     </>
