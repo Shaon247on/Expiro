@@ -479,7 +479,7 @@ export default function AdminOpenedItemsPage({
 
                   <div className="relative w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-gray-100">
                     <Image
-                      src={item.proof_image}
+                      src={item.proof_image as string}
                       alt={item.product_name}
                       fill
                       className="object-cover"

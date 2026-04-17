@@ -1,20 +1,17 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
+import { useEffect, useState, useCallback } from "react";
 import {
-  AlertTriangle,
-  Clock,
   ShoppingCart,
-  RefreshCw,
-  CalendarDays,
-  Boxes,
-  Tag,
   ScanLine,
   Loader2,
+  RefreshCw,
+  PackageSearch,
+  CalendarDays,
+  Boxes,
 } from "lucide-react";
+import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -22,116 +19,67 @@ import {
   SheetTitle,
   SheetFooter,
 } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-// ── Types ──────────────────────────────────────────────────────────────────────
-
-export type ProductStatus =
-  | "Urgent"
-  | "Expiring soon"
-  | "Safe Item"
-  | "Remove Item"
-  | "Open Item";
-
-export const statusMeta: Record<
-  ProductStatus,
-  { color: string; bg: string; dot: string }
-> = {
-  Urgent:           { color: "#E11D48", bg: "#FFF1F2", dot: "#E11D48" },
-  "Expiring soon":  { color: "#EA580C", bg: "#FFF7ED", dot: "#EA580C" },
-  "Safe Item":      { color: "#16A34A", bg: "#F0FDF4", dot: "#16A34A" },
-  "Remove Item":    { color: "#E11D48", bg: "#FFF1F2", dot: "#E11D48" },
-  "Open Item":      { color: "#16A34A", bg: "#F0FDF4", dot: "#16A34A" },
-};
-
-export interface Batch {
-  id: string;
-  batchNo: string;
-  expiryDate: string;
-  quantity: number;
-  status: ProductStatus;
-}
-
-export interface Product {
-  id: string;
-  name: string;
-  category: string;
-  barcode: string;
-  totalQuantity: number;
-  status: ProductStatus;
-  batches: Batch[];
-}
-
-// ── Mock data — replace with real API call ────────────────────────────────────
-
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: "p1",
-    name: "Organic Whole Milk",
-    category: "Dairy",
-    barcode: "5901234123457",
-    totalQuantity: 48,
-    status: "Safe Item",
-    batches: [
-      { id: "b1", batchNo: "BTH-001", expiryDate: "2025-04-20", quantity: 12, status: "Urgent"        },
-      { id: "b2", batchNo: "BTH-002", expiryDate: "2025-05-10", quantity: 20, status: "Expiring soon" },
-      { id: "b3", batchNo: "BTH-003", expiryDate: "2025-07-15", quantity: 16, status: "Safe Item"     },
-    ],
-  },
-  {
-    id: "p2",
-    name: "Sourdough Bread",
-    category: "Bakery",
-    barcode: "4006381333931",
-    totalQuantity: 24,
-    status: "Expiring soon",
-    batches: [
-      { id: "b4", batchNo: "BTH-004", expiryDate: "2025-04-18", quantity: 10, status: "Remove Item"   },
-      { id: "b5", batchNo: "BTH-005", expiryDate: "2025-04-25", quantity: 14, status: "Expiring soon" },
-    ],
-  },
-];
-
-async function lookupByBarcode(code: string): Promise<Product | null> {
-  // TODO: replace with real API call
-  await new Promise((r) => setTimeout(r, 500));
-  return MOCK_PRODUCTS.find((p) => p.barcode === code) ?? null;
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
+import {
+  sellScannedProductAction,
+} from "@/actions/admin/sellProduct.action";
+import type {
+  ProductScanFindResponse,
+  ScanSellBatch,
+  ScanSellExistingProduct,
+} from "@/types/sellProduct.type";
+import { scanProductByBarcodeAction } from "@/actions/admin/product.action";
 
 function formatDate(iso: string) {
   return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit", month: "short", year: "numeric",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   }).format(new Date(iso));
 }
 
 function daysUntil(iso: string) {
-  return Math.ceil((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-}
-
-// ── Sub-components ─────────────────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: ProductStatus }) {
-  const meta = statusMeta[status];
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap"
-      style={{ backgroundColor: meta.bg, color: meta.color }}
-    >
-      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: meta.dot }} />
-      {status}
-    </span>
+  return Math.ceil(
+    (new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
   );
 }
 
-// Step bar removed — only one step (batch → sell)
-type Step = "loading" | "not_found" | "batch";
+function getBatchStatusMeta(status: string) {
+  switch (status?.toLowerCase()) {
+    case "available":
+    case "active":
+      return {
+        label: "Available",
+        text: "#15803D",
+        bg: "#DCFCE7",
+      };
+    case "opened":
+      return {
+        label: "Opened",
+        text: "#2563EB",
+        bg: "#DBEAFE",
+      };
+    case "removed":
+      return {
+        label: "Removed",
+        text: "#DC2626",
+        bg: "#FEE2E2",
+      };
+    default:
+      return {
+        label: status || "Unknown",
+        text: "#6B7280",
+        bg: "#F3F4F6",
+      };
+  }
+}
 
-// ── Main Component ─────────────────────────────────────────────────────────────
+type Step = "loading" | "not_found" | "batch";
 
 interface SellProductDrawerProps {
   open: boolean;
-  /** Barcode string passed in from the camera scan modal */
   scannedCode: string | null;
   onOpenChange: (open: boolean) => void;
 }
@@ -141,49 +89,101 @@ export default function SellProductDrawer({
   scannedCode,
   onOpenChange,
 }: SellProductDrawerProps) {
-  const [step, setStep]                   = useState<Step>("loading");
-  const [product, setProduct]             = useState<Product | null>(null);
-  const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
+  const [step, setStep] = useState<Step>("loading");
+  const [product, setProduct] = useState<ScanSellExistingProduct | null>(null);
+  const [selectedBatch, setSelectedBatch] = useState<ScanSellBatch | null>(null);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [submitting, setSubmitting] = useState(false);
 
-  // ── Look up product whenever a new code arrives ───────────────────────────
   useEffect(() => {
     if (!open || !scannedCode) return;
+
     setStep("loading");
     setProduct(null);
     setSelectedBatch(null);
+    setQuantity(1);
 
-    lookupByBarcode(scannedCode).then((found) => {
-      if (found) {
-        setProduct(found);
+    void (async () => {
+      const result = await scanProductByBarcodeAction(scannedCode);
+
+      if (!result.success) {
+        setStep("not_found");
+        toast.error("Lookup failed", {
+          description: result.message,
+          position: "bottom-right",
+        });
+        return;
+      }
+
+      const payload = result.data as ProductScanFindResponse;
+
+      if (payload.type === "existing") {
+        setProduct(payload.product);
         setStep("batch");
       } else {
         setStep("not_found");
       }
-    });
+    })();
   }, [open, scannedCode]);
 
-  // ── Reset on close ────────────────────────────────────────────────────────
   const handleClose = useCallback(() => {
     onOpenChange(false);
-    // Delay reset so exit animation completes
     setTimeout(() => {
       setStep("loading");
       setProduct(null);
       setSelectedBatch(null);
+      setQuantity(1);
+      setSubmitting(false);
     }, 300);
   }, [onOpenChange]);
 
-  // ── Confirm sell ──────────────────────────────────────────────────────────
-  function handleSell() {
-    if (!product || !selectedBatch) return;
-    toast.success(
-      `Sold 1× ${product.name} from batch ${selectedBatch.batchNo}`,
-      { position: "bottom-right" }
-    );
+  async function handleSell() {
+    if (!product || !selectedBatch) {
+      toast.error("Select a batch first.", {
+        position: "bottom-right",
+      });
+      return;
+    }
+
+    if (!quantity || quantity < 1) {
+      toast.error("Enter a valid quantity.", {
+        position: "bottom-right",
+      });
+      return;
+    }
+
+    if (quantity > selectedBatch.available_quantity) {
+      toast.error("Quantity exceeds available stock.", {
+        description: `Only ${selectedBatch.available_quantity} unit(s) available in this batch.`,
+        position: "bottom-right",
+      });
+      return;
+    }
+
+    setSubmitting(true);
+
+    const result = await sellScannedProductAction({
+      quantity,
+      batch_id: selectedBatch.id,
+    });
+
+    if (!result.success) {
+      toast.error("Sell failed", {
+        description: result.message,
+        position: "bottom-right",
+      });
+      setSubmitting(false);
+      return;
+    }
+
+    toast.success(result.message, {
+      description: `${result.data.sold_quantity} unit(s) sold from ${selectedBatch.batch_code}.`,
+      position: "bottom-right",
+    });
+
     handleClose();
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
       <SheetContent
@@ -191,7 +191,6 @@ export default function SellProductDrawer({
         className="flex flex-col p-0 gap-0 w-full sm:max-w-[520px]"
         style={{ borderRadius: "24px 0 0 24px" }}
       >
-        {/* ── Header ── */}
         <SheetHeader className="shrink-0 flex flex-row items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
           <div className="flex items-center gap-3 min-w-0">
             <div
@@ -200,10 +199,15 @@ export default function SellProductDrawer({
             >
               <ShoppingCart size={17} style={{ color: "#6D28D9" }} />
             </div>
+
             <div className="min-w-0">
-              <SheetTitle className="text-[15px] font-bold leading-tight" style={{ color: "#1A3340" }}>
+              <SheetTitle
+                className="text-[15px] font-bold leading-tight"
+                style={{ color: "#1A3340" }}
+              >
                 {product ? product.name : "Sell Product"}
               </SheetTitle>
+
               {scannedCode && (
                 <p className="text-[11px] text-gray-400 flex items-center gap-1 mt-0.5">
                   <ScanLine size={11} /> {scannedCode}
@@ -212,7 +216,6 @@ export default function SellProductDrawer({
             </div>
           </div>
 
-          {/* Re-scan button */}
           {(step === "batch" || step === "not_found") && (
             <button
               onClick={handleClose}
@@ -226,164 +229,218 @@ export default function SellProductDrawer({
           )}
         </SheetHeader>
 
-        {/* ── Body ── */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-
-          {/* ── Loading ── */}
           {step === "loading" && (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <div
                 className="w-16 h-16 rounded-2xl flex items-center justify-center"
                 style={{ backgroundColor: "#EDE9FE" }}
               >
-                <Loader2 size={28} className="animate-spin" style={{ color: "#6D28D9" }} />
+                <Loader2
+                  size={28}
+                  className="animate-spin"
+                  style={{ color: "#6D28D9" }}
+                />
               </div>
               <div className="text-center">
-                <p className="text-[15px] font-bold" style={{ color: "#1A3340" }}>Looking up product…</p>
-                <p className="text-[12px] text-gray-400 mt-1">Searching barcode {scannedCode}</p>
+                <p
+                  className="text-[15px] font-bold"
+                  style={{ color: "#1A3340" }}
+                >
+                  Looking up product…
+                </p>
+                <p className="text-[12px] text-gray-400 mt-1">
+                  Searching barcode {scannedCode}
+                </p>
               </div>
             </div>
           )}
 
-          {/* ── Not found ── */}
           {step === "not_found" && (
             <div className="flex flex-col items-center justify-center py-16 gap-4 text-center px-4">
               <div
                 className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                style={{ backgroundColor: "#FFF1F2" }}
+                style={{ backgroundColor: "#FEF2F2" }}
               >
-                <AlertTriangle size={28} style={{ color: "#E11D48" }} />
+                <PackageSearch size={28} style={{ color: "#DC2626" }} />
               </div>
+
               <div>
-                <p className="text-[16px] font-bold" style={{ color: "#1A3340" }}>Product Not Found</p>
-                <p className="text-[13px] text-gray-500 mt-1.5 leading-relaxed">
-                  No product matched barcode{" "}
-                  <span className="font-semibold text-gray-700 font-mono">{scannedCode}</span>.
-                  <br />Try scanning again or check the barcode is readable.
+                <p
+                  className="text-[15px] font-bold"
+                  style={{ color: "#1A3340" }}
+                >
+                  Product not found
+                </p>
+                <p className="text-[12px] text-gray-400 mt-1">
+                  No sellable product was found for barcode{" "}
+                  <span className="font-mono">{scannedCode}</span>.
                 </p>
               </div>
+
               <Button
+                type="button"
                 onClick={handleClose}
-                className="mt-2 h-10 px-6 rounded-xl text-sm font-semibold border-0"
+                className="h-10 px-5 rounded-xl text-sm font-semibold"
                 style={{ backgroundColor: "#6D28D9", color: "white" }}
               >
-                <RefreshCw size={14} className="mr-1.5" /> Scan Again
+                Scan Again
               </Button>
             </div>
           )}
 
-          {/* ── Batch selection ── */}
           {step === "batch" && product && (
-            <div className="space-y-5">
+            <>
+              <div className="rounded-2xl border border-gray-100 bg-white p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p
+                      className="text-[16px] font-bold"
+                      style={{ color: "#1A3340" }}
+                    >
+                      {product.name}
+                    </p>
+                    <p className="text-[12px] text-gray-500 mt-1">
+                      {product.category_name} · ${product.price}
+                    </p>
+                  </div>
 
-              {/* Product summary strip */}
-              <div
-                className="rounded-2xl px-4 py-3.5 flex items-center gap-4"
-                style={{ backgroundColor: "#F5F3FF", border: "1px solid #DDD6FE" }}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold truncate" style={{ color: "#1A3340" }}>
-                    {product.name}
-                  </p>
-                  <div className="flex items-center gap-3 mt-1 flex-wrap">
-                    <span className="flex items-center gap-1 text-[11px] text-gray-500">
-                      <Tag size={10} /> {product.category}
-                    </span>
-                    <span className="flex items-center gap-1 text-[11px] text-gray-500">
-                      <Boxes size={10} /> {product.totalQuantity} total units
-                    </span>
+                  <span
+                    className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                    style={{
+                      backgroundColor: "#F5F3FF",
+                      color: "#6D28D9",
+                    }}
+                  >
+                    {product.batches.length} batch{product.batches.length > 1 ? "es" : ""}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-[12px]">
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <Boxes size={14} />
+                    Total batches: {product.batches.length}
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <CalendarDays size={14} />
+                    Supplier expiry: {formatDate(product.expiry_date)}
                   </div>
                 </div>
-                <StatusBadge status={product.status} />
               </div>
 
-              {/* Instruction */}
-              <div className="space-y-1">
-                <h2 className="text-[15px] font-bold" style={{ color: "#1A3340" }}>
-                  Select Batch
-                </h2>
-                <div
-                  className="flex items-start gap-2 rounded-xl px-3.5 py-2.5 text-[12px]"
-                  style={{ backgroundColor: "#FFF7ED", color: "#EA580C", border: "1px solid #FED7AA" }}
+              <div className="space-y-3">
+                <p
+                  className="text-[13px] font-semibold"
+                  style={{ color: "#1A3340" }}
                 >
-                  <Clock size={13} className="shrink-0 mt-0.5" />
-                  <span>Check the expiry date printed on the product label and select the matching batch below.</span>
+                  Select a batch
+                </p>
+
+                <div className="space-y-3">
+                  {product.batches.map((batch) => {
+                    const active = selectedBatch?.id === batch.id;
+                    const days = daysUntil(batch.expiry_date);
+                    const statusMeta = getBatchStatusMeta(batch.status);
+
+                    return (
+                      <button
+                        key={batch.id}
+                        type="button"
+                        onClick={() => setSelectedBatch(batch)}
+                        className="w-full text-left rounded-2xl border p-4 transition-all"
+                        style={{
+                          borderColor: active ? "#6D28D9" : "#E5E7EB",
+                          backgroundColor: active ? "#F5F3FF" : "white",
+                          boxShadow: active
+                            ? "0 0 0 1px rgba(109,40,217,0.12)"
+                            : "none",
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p
+                              className="text-[13px] font-bold"
+                              style={{ color: "#1A3340" }}
+                            >
+                              {batch.batch_code}
+                            </p>
+
+                            <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-gray-500">
+                              <span>Available: {batch.available_quantity}</span>
+                              <span>Received: {batch.received_quantity}</span>
+                              <span>${batch.unit_price}</span>
+                            </div>
+                          </div>
+
+                          <span
+                            className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                            style={{
+                              color: statusMeta.text,
+                              backgroundColor: statusMeta.bg,
+                            }}
+                          >
+                            {statusMeta.label}
+                          </span>
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-between text-[11px]">
+                          <span className="text-gray-500">
+                            Expiry: {formatDate(batch.expiry_date)}
+                          </span>
+
+                          <span
+                            className="font-semibold"
+                            style={{
+                              color:
+                                days <= 2
+                                  ? "#DC2626"
+                                  : days <= 7
+                                  ? "#EA580C"
+                                  : "#16A34A",
+                            }}
+                          >
+                            {days < 0 ? "Expired" : `${days}d left`}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Batch cards */}
-              <div className="space-y-2.5">
-                {product.batches.map((batch) => {
-                  const isSelected = selectedBatch?.id === batch.id;
-                  const days       = daysUntil(batch.expiryDate);
+              <div className="space-y-2">
+                <label
+                  htmlFor="sell-quantity"
+                  className="text-[13px] font-semibold"
+                  style={{ color: "#1A3340" }}
+                >
+                  Quantity to sell
+                </label>
 
-                  return (
-                    <button
-                      key={batch.id}
-                      type="button"
-                      onClick={() => setSelectedBatch(batch)}
-                      className="w-full text-left rounded-2xl p-4 transition-all duration-150"
-                      style={{
-                        backgroundColor: isSelected ? "#F5F3FF" : "#FAFAF9",
-                        border:          isSelected ? "2px solid #6D28D9" : "1.5px solid #E5E7EB",
-                        boxShadow:       isSelected ? "0 0 0 3px rgba(109,40,217,0.08)" : "none",
-                      }}
-                      aria-pressed={isSelected}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        {/* Radio + batch info */}
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div
-                            className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 border-2 transition-all duration-150"
-                            style={{
-                              borderColor:     isSelected ? "#6D28D9" : "#D1D5DB",
-                              backgroundColor: isSelected ? "#6D28D9" : "white",
-                            }}
-                          >
-                            {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
-                          </div>
+                <Input
+                  id="sell-quantity"
+                  type="number"
+                  min={1}
+                  value={quantity}
+                  onChange={(e) => setQuantity(Number(e.target.value || 0))}
+                  placeholder="Enter quantity"
+                  className="h-11 rounded-xl border-gray-200"
+                />
 
-                          <div className="min-w-0">
-                            <p className="text-[13px] font-bold" style={{ color: "#1A3340" }}>
-                              {batch.batchNo}
-                            </p>
-                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                              <CalendarDays size={11} className="text-gray-400 shrink-0" />
-                              <span className="text-[11px] text-gray-500">
-                                Expires {formatDate(batch.expiryDate)}
-                              </span>
-                              <span
-                                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
-                                style={{
-                                  backgroundColor: days < 0 ? "#FFF1F2" : days < 7 ? "#FFF7ED" : "#F0FDF4",
-                                  color:           days < 0 ? "#E11D48" : days < 7 ? "#EA580C" : "#16A34A",
-                                }}
-                              >
-                                {days < 0 ? "Expired" : `${days}d left`}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Status + qty */}
-                        <div className="flex flex-col items-end gap-1.5 shrink-0">
-                          <StatusBadge status={batch.status} />
-                          <span className="text-[11px] font-semibold text-gray-500">
-                            {batch.quantity} units
-                          </span>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
+                {selectedBatch && (
+                  <p className="text-[11px] text-gray-500">
+                    Available in selected batch:{" "}
+                    <span className="font-semibold">
+                      {selectedBatch.available_quantity}
+                    </span>
+                  </p>
+                )}
               </div>
-            </div>
+            </>
           )}
-
         </div>
 
-        {/* ── Footer ── */}
-        <SheetFooter className="shrink-0 flex flex-row items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-white">
+        <SheetFooter className="shrink-0 flex flex-row items-center justify-between gap-3 px-6 py-4 border-t border-gray-100 bg-white">
           <Button
             type="button"
             variant="outline"
@@ -394,17 +451,15 @@ export default function SellProductDrawer({
             Cancel
           </Button>
 
-          {step === "batch" && (
-            <Button
-              onClick={handleSell}
-              disabled={!selectedBatch}
-              className="h-10 px-6 rounded-xl text-sm font-semibold border-0 disabled:opacity-50"
-              style={{ backgroundColor: "#6D28D9", color: "white" }}
-            >
-              <ShoppingCart size={15} className="mr-1.5" />
-              Confirm Sale
-            </Button>
-          )}
+          <Button
+            type="button"
+            onClick={handleSell}
+            disabled={step !== "batch" || !selectedBatch || submitting}
+            className="h-10 px-7 rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ backgroundColor: "#6D28D9", color: "white" }}
+          >
+            {submitting ? "Selling..." : "Confirm Sell"}
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

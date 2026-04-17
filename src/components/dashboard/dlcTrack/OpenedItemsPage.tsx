@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { Eye, PackageOpen, ScanLine } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,11 +25,17 @@ import {
 import ScanAndCaptureModal from "./ScanAndCaptureModal";
 import ProductPagination from "@/components/dashboard/product/Productpagination";
 import {
+  lookupUnitForOpenAction,
+  confirmOpenProductAction,
+  type OpenProjectLookupData,
+} from "@/actions/dlc/open-project.action";
+import {
   DLC_TRUST_PAGE_SIZE,
   DLC_TRUST_STATUS_META,
   type DlcTrustFilterStatus,
   type DlcTrustProduct,
 } from "@/types/dlc-trust.type";
+import { getDlcTrustProductDetailsAction } from "@/actions/staff/dlc-trust.action";
 
 function formatDateTime(iso: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -54,10 +60,7 @@ function getDlcStatus(item: DlcTrustProduct): DlcTrustFilterStatus {
 
   if (productStatus === "urgent") return "urgent";
   if (productStatus === "expiring_soon") return "expiring_soon";
-  if (productStatus === "remove_item" || item.status === "removed") {
-    return "removed";
-  }
-
+  if (productStatus === "remove_item" || item.status === "removed") return "removed";
   return "opened";
 }
 
@@ -125,8 +128,8 @@ function ItemDetailDialog({
   item: DlcTrustProduct;
   onClose: () => void;
 }) {
-  const status = getDlcStatus(item);
   const days = getDaysLeft(item.active_expiry_date ?? item.expiry_date);
+  const status = getDlcStatus(item);
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -241,58 +244,94 @@ export default function OpenedItemsPage({
   const [localItems, setLocalItems] = useState<DlcTrustProduct[]>(items);
   const [modalOpen, setModalOpen] = useState(false);
   const [viewItem, setViewItem] = useState<DlcTrustProduct | null>(null);
+  const [detailsLoadingId, setDetailsLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalItems(items);
   }, [items]);
 
-  async function lookupProduct(barcode: string) {
-    await new Promise((r) => setTimeout(r, 500));
+  const lookupProduct = useCallback(async (barcode: string) => {
+    const result = await lookupUnitForOpenAction(barcode);
 
-    return {
-      itemName: barcode,
-      category: "Unknown",
-      expiryDate: new Date().toISOString().split("T")[0],
-      openExpiryDays: 7,
-      barcode,
-    };
+    if (!result.success) {
+      toast.error("Lookup failed", {
+        description: result.message,
+        position: "bottom-right",
+      });
+      return null;
+    }
+
+    return result.data;
+  }, []);
+
+  const handleComplete = useCallback(
+    async (proofFile: File, previewUrl: string, product: OpenProjectLookupData) => {
+      const formData = new FormData();
+      formData.append("unique_barcode", product.scanned_unit.unique_barcode);
+      formData.append("proof_image", proofFile);
+
+      const result = await confirmOpenProductAction(formData);
+
+      if (!result.success) {
+        toast.error("Open confirmation failed", {
+          description: result.message,
+          position: "bottom-right",
+        });
+        return;
+      }
+
+      const proof = result.data.proof;
+
+      const newItem: DlcTrustProduct = {
+        id: result.data.product_id,
+        category: product.category,
+        category_name: product.category_name,
+        category_image: result.data.proof.proof_image || previewUrl,
+        name: result.data.product_name,
+        barcode: result.data.product_barcode,
+        quantity: 1,
+        purchase_date: result.data.batch.purchase_date,
+        expiry_date: result.data.batch.expiry_date,
+        track_open_expiry_days: product.track_open_expiry_days,
+        open_expiry_days: product.open_expiry_days,
+        status: proof.product_status,
+        products_status: proof.item_status,
+        active_expiry_date: result.data.opened_unit.opened_expiry_date,
+        price: result.data.batch.unit_price,
+        opened_units_count: 1,
+        created_at: proof.opened_at,
+        updated_at: proof.created_at,
+      };
+
+      setLocalItems((prev) => [newItem, ...prev]);
+
+      toast.success(result.message, {
+        description: `${result.data.product_name} — unit #${result.data.opened_unit.unit_number} opened successfully.`,
+        position: "bottom-right",
+      });
+
+      setModalOpen(false);
+    },
+    []
+  );
+
+  async function handleViewDetails(item: DlcTrustProduct) {
+    setDetailsLoadingId(item.id);
+
+    const result = await getDlcTrustProductDetailsAction(item.id);
+
+    if (!result.success) {
+      toast.error("Failed to load details", {
+        description: result.message,
+        position: "bottom-right",
+      });
+      setDetailsLoadingId(null);
+      return;
+    }
+
+    setViewItem(item);
+    setDetailsLoadingId(null);
   }
-
-  const handleComplete = (imageDataUrl: string, product: Awaited<ReturnType<typeof lookupProduct>>) => {
-    if (!product) return;
-
-    const now = new Date().toISOString();
-
-    const newItem: DlcTrustProduct = {
-      id: `opened-${Date.now()}`,
-      category: "manual-category",
-      category_name: product.category,
-      category_image: imageDataUrl,
-      name: product.itemName,
-      barcode: product.barcode,
-      quantity: 1,
-      purchase_date: now.split("T")[0],
-      expiry_date: product.expiryDate,
-      track_open_expiry_days: true,
-      open_expiry_days: product.openExpiryDays,
-      status: "opened",
-      products_status: "open_item",
-      active_expiry_date: new Date(
-        new Date(now).getTime() + product.openExpiryDays * 86400000
-      )
-        .toISOString()
-        .split("T")[0],
-      price: "0.00",
-      opened_units_count: 1,
-      created_at: now,
-      updated_at: now,
-    };
-
-    setLocalItems((prev) => [newItem, ...prev]);
-    toast.success(`"${product.itemName}" marked as opened.`, {
-      position: "bottom-right",
-    });
-  };
 
   function handleFilterChange(value: string) {
     const params = new URLSearchParams();
@@ -310,7 +349,7 @@ export default function OpenedItemsPage({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
+      {/* DLC trust card with scan button */}
       <div className="flex items-center gap-4 p-5 rounded-2xl bg-white border border-gray-100 shadow-sm">
         <div
           className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
@@ -324,7 +363,7 @@ export default function OpenedItemsPage({
             Opened Items
           </h1>
           <p className="text-sm" style={{ color: "#51564E" }}>
-            {totalItems} items currently open
+            {localItems.length} items currently open
           </p>
         </div>
 
@@ -339,7 +378,7 @@ export default function OpenedItemsPage({
         </Button>
       </div>
 
-      {/* Filter between card and list */}
+      {/* filter between card and list */}
       <div className="flex justify-end">
         <div className="w-full sm:w-52">
           <Select value={filter || "all"} onValueChange={handleFilterChange}>
@@ -357,7 +396,7 @@ export default function OpenedItemsPage({
         </div>
       </div>
 
-      {/* Table */}
+      {/* list */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full" style={{ minWidth: 980 }}>
@@ -377,8 +416,14 @@ export default function OpenedItemsPage({
             <tbody>
               {localItems.length === 0 ? (
                 <tr>
-                  <td colSpan={DESKTOP_COLS.length} className="py-16 text-center">
-                    <PackageOpen size={36} className="mx-auto mb-3 opacity-20" />
+                  <td
+                    colSpan={DESKTOP_COLS.length}
+                    className="py-16 text-center"
+                  >
+                    <PackageOpen
+                      size={36}
+                      className="mx-auto mb-3 opacity-20"
+                    />
                     <p className="text-sm text-gray-400">
                       No opened items yet. Tap Scan Product to begin.
                     </p>
@@ -386,7 +431,9 @@ export default function OpenedItemsPage({
                 </tr>
               ) : (
                 localItems.map((item, idx) => {
-                  const days = getDaysLeft(item.active_expiry_date ?? item.expiry_date);
+                  const days = getDaysLeft(
+                    item.active_expiry_date ?? item.expiry_date
+                  );
                   const status = getDlcStatus(item);
 
                   return (
@@ -395,16 +442,25 @@ export default function OpenedItemsPage({
                       className="border-b border-gray-50 last:border-0 hover:bg-gray-50/40 transition-colors"
                     >
                       <td className="px-4 py-3 text-center text-[12px] font-medium text-gray-400 tabular-nums">
-                        {String((currentPage - 1) * DLC_TRUST_PAGE_SIZE + idx + 1).padStart(2, "0")}
+                        {String(
+                          (currentPage - 1) * DLC_TRUST_PAGE_SIZE + idx + 1
+                        ).padStart(2, "0")}
                       </td>
 
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
                           <div className="relative w-9 h-9 rounded-xl overflow-hidden shrink-0 border border-gray-100 bg-gray-50">
                             {item.category_image ? (
-                              <Image src={item.category_image} alt={item.name} fill className="object-cover" />
+                              <Image
+                                src={item.category_image}
+                                alt={item.name}
+                                fill
+                                className="object-cover"
+                              />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-sm">📦</div>
+                              <div className="w-full h-full flex items-center justify-center text-sm">
+                                📦
+                              </div>
                             )}
                           </div>
                           <span
@@ -430,7 +486,9 @@ export default function OpenedItemsPage({
 
                       <td className="px-4 py-3 whitespace-nowrap">
                         <p className="text-[12px] tabular-nums text-gray-600">
-                          {item.active_expiry_date ? formatDate(item.active_expiry_date) : "—"}
+                          {item.active_expiry_date
+                            ? formatDate(item.active_expiry_date)
+                            : "—"}
                         </p>
                         <p
                           className="text-[11px] font-semibold"
@@ -447,14 +505,19 @@ export default function OpenedItemsPage({
                                 : "#16A34A",
                           }}
                         >
-                          {days == null ? "—" : days < 0 ? "Expired" : `${days}d left`}
+                          {days == null
+                            ? "—"
+                            : days < 0
+                            ? "Expired"
+                            : `${days}d left`}
                         </p>
                       </td>
 
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-1">
                           <StatusBadge status={status} />
-                          {(status === "urgent" || status === "expiring_soon") && <TGTGBadge />}
+                          {(status === "urgent" ||
+                            status === "expiring_soon") && <TGTGBadge />}
                         </div>
                       </td>
 
@@ -466,10 +529,15 @@ export default function OpenedItemsPage({
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => setViewItem(item)}
+                          onClick={() => void handleViewDetails(item)}
+                          disabled={detailsLoadingId === item.id}
                           className="w-8 h-8 rounded-lg text-gray-400 hover:text-[#1A3340] hover:bg-gray-100"
                         >
-                          <Eye size={15} />
+                          {detailsLoadingId === item.id ? (
+                            <ScanLine size={15} className="animate-spin" />
+                          ) : (
+                            <Eye size={15} />
+                          )}
                         </Button>
                       </td>
                     </tr>
@@ -480,7 +548,6 @@ export default function OpenedItemsPage({
           </table>
         </div>
 
-        {/* Mobile cards */}
         <div className="md:hidden divide-y divide-gray-50">
           {localItems.length === 0 && (
             <div className="py-16 text-center px-6">
@@ -497,7 +564,9 @@ export default function OpenedItemsPage({
           )}
 
           {localItems.map((item, idx) => {
-            const days = getDaysLeft(item.active_expiry_date ?? item.expiry_date);
+            const days = getDaysLeft(
+              item.active_expiry_date ?? item.expiry_date
+            );
             const status = getDlcStatus(item);
 
             return (
@@ -509,26 +578,43 @@ export default function OpenedItemsPage({
 
                   <div className="relative w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-gray-100 bg-gray-50">
                     {item.category_image ? (
-                      <Image src={item.category_image} alt={item.name} fill className="object-cover" />
+                      <Image
+                        src={item.category_image}
+                        alt={item.name}
+                        fill
+                        className="object-cover"
+                      />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-sm">📦</div>
+                      <div className="w-full h-full flex items-center justify-center text-sm">
+                        📦
+                      </div>
                     )}
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold truncate" style={{ color: "#1A3340" }}>
+                    <p
+                      className="text-[13px] font-semibold truncate"
+                      style={{ color: "#1A3340" }}
+                    >
                       {item.name}
                     </p>
-                    <p className="text-[11px] text-gray-400">{item.category_name}</p>
+                    <p className="text-[11px] text-gray-400">
+                      {item.category_name}
+                    </p>
                   </div>
 
                   <Button
                     size="icon"
                     variant="ghost"
-                    onClick={() => setViewItem(item)}
+                    onClick={() => void handleViewDetails(item)}
+                    disabled={detailsLoadingId === item.id}
                     className="w-8 h-8 rounded-lg text-gray-400 hover:text-[#1A3340] shrink-0"
                   >
-                    <Eye size={14} />
+                    {detailsLoadingId === item.id ? (
+                      <ScanLine size={14} className="animate-spin" />
+                    ) : (
+                      <Eye size={14} />
+                    )}
                   </Button>
                 </div>
 
@@ -539,18 +625,26 @@ export default function OpenedItemsPage({
                     {
                       label: "Validity",
                       value:
-                        item.track_open_expiry_days && item.open_expiry_days != null
+                        item.track_open_expiry_days &&
+                        item.open_expiry_days != null
                           ? `${item.open_expiry_days} days`
                           : "No PAO",
                     },
                     {
                       label: "Expires After",
-                      value: item.active_expiry_date ? formatDate(item.active_expiry_date) : "—",
+                      value: item.active_expiry_date
+                        ? formatDate(item.active_expiry_date)
+                        : "—",
                     },
                   ].map(({ label, value }) => (
                     <div key={label}>
-                      <p className="text-[10px] text-gray-400 uppercase tracking-wide">{label}</p>
-                      <p className="text-[12px] font-semibold" style={{ color: "#1A3340" }}>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide">
+                        {label}
+                      </p>
+                      <p
+                        className="text-[12px] font-semibold"
+                        style={{ color: "#1A3340" }}
+                      >
                         {value}
                       </p>
                     </div>
@@ -566,7 +660,8 @@ export default function OpenedItemsPage({
 
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <StatusBadge status={status} />
-                    {(status === "urgent" || status === "expiring_soon") && <TGTGBadge />}
+                    {(status === "urgent" ||
+                      status === "expiring_soon") && <TGTGBadge />}
                   </div>
 
                   <span
@@ -608,7 +703,9 @@ export default function OpenedItemsPage({
         lookupProduct={lookupProduct}
       />
 
-      {viewItem && <ItemDetailDialog item={viewItem} onClose={() => setViewItem(null)} />}
+      {viewItem && (
+        <ItemDetailDialog item={viewItem} onClose={() => setViewItem(null)} />
+      )}
     </div>
   );
 }

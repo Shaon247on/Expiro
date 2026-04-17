@@ -22,6 +22,7 @@ type LoginResponse = {
     role: string;
     phone: string;
     shop_category: string;
+    profile_image: string;
   };
 };
 
@@ -97,7 +98,7 @@ export async function loginAction(
     );
 
     const data = response.data;
-    console.log("the response:", data);
+    console.log("the response3:", data);
     const access = data?.token?.access;
     const refresh = data?.token?.refresh;
     const user = data?.user;
@@ -151,6 +152,7 @@ export async function loginAction(
         role: user.role,
         phone: user.phone,
         shop_category: user.shop_category,
+        profile_pic: user.profile_image
       }),
       httpOnly: true,
       secure: isProd,
@@ -175,6 +177,7 @@ export async function loginAction(
       const serverMessage =
         (error.response?.data as { message?: string } | undefined)?.message ||
         "Invalid email or password.";
+    console.log("the response3:", serverMessage);
 
       return {
         success: false,
@@ -191,4 +194,14 @@ export async function loginAction(
       redirect(redirectPath);
     }
   }
+}
+
+export async function logoutAction() {
+  const cookieStore = await cookies();
+
+  cookieStore.delete(COOKIE.access);
+  cookieStore.delete(COOKIE.refresh);
+  cookieStore.delete(COOKIE.session);
+
+  redirect("/login");
 }

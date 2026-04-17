@@ -1,23 +1,40 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
-import { X, Camera, RefreshCw, Check, Loader2 } from "lucide-react";
+import { useRef, useState, useEffect, useCallback, ChangeEvent } from "react";
+import {
+  X,
+  Camera,
+  RefreshCw,
+  Check,
+  Loader2,
+  Images,
+  AlertTriangle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 interface CameraCaptureProps {
   open: boolean;
-  onCapture: (imageDataUrl: string) => void;
+  onCapture: (file: File, previewUrl: string) => void;
   onClose: () => void;
 }
 
-export default function CameraCapture({ open, onCapture, onClose }: CameraCaptureProps) {
-  const videoRef   = useRef<HTMLVideoElement>(null);
-  const canvasRef  = useRef<HTMLCanvasElement>(null);
-  const streamRef  = useRef<MediaStream | null>(null);
+export default function CameraCapture({
+  open,
+  onCapture,
+  onClose,
+}: CameraCaptureProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
 
-  const [phase, setPhase]     = useState<"starting" | "live" | "preview" | "error">("starting");
+  const [phase, setPhase] = useState<"starting" | "live" | "preview" | "error">(
+    "starting",
+  );
   const [preview, setPreview] = useState<string | null>(null);
-  const [errMsg, setErrMsg]   = useState("");
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
+  const [errMsg, setErrMsg] = useState("");
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -28,7 +45,9 @@ export default function CameraCapture({ open, onCapture, onClose }: CameraCaptur
   const startCamera = useCallback(async () => {
     setPhase("starting");
     setPreview(null);
+    setPreviewFile(null);
     setErrMsg("");
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -38,11 +57,14 @@ export default function CameraCapture({ open, onCapture, onClose }: CameraCaptur
         },
         audio: false,
       });
+
       streamRef.current = stream;
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
+
       setPhase("live");
     } catch (err: unknown) {
       setErrMsg(err instanceof Error ? err.message : "Camera access denied.");
@@ -51,33 +73,76 @@ export default function CameraCapture({ open, onCapture, onClose }: CameraCaptur
   }, []);
 
   useEffect(() => {
-    if (open) startCamera();
-    else      stopStream();
+    if (open) {
+      void startCamera();
+    } else {
+      stopStream();
+    }
+
     return () => stopStream();
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, startCamera, stopStream]);
+
+  function dataUrlToFile(dataUrl: string, fileName: string) {
+    const arr = dataUrl.split(",");
+    const mime = arr[0].match(/:(.*?);/)?.[1] || "image/jpeg";
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+
+    while (n--) u8arr[n] = bstr.charCodeAt(n);
+
+    return new File([u8arr], fileName, { type: mime });
+  }
 
   function handleCapture() {
-    const video  = videoRef.current;
+    const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
-    canvas.width  = video.videoWidth;
+
+    canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext("2d")?.drawImage(video, 0, 0);
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+    const file = dataUrlToFile(dataUrl, "proof_image.jpg");
+
     stopStream();
     setPreview(dataUrl);
+    setPreviewFile(file);
     setPhase("preview");
+  }
+
+  function handleGalleryPick() {
+    galleryRef.current?.click();
+  }
+
+  function handleGalleryChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      stopStream();
+      setPreview(dataUrl);
+      setPreviewFile(file);
+      setPhase("preview");
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
   }
 
   function handleRetake() {
     setPreview(null);
-    startCamera();
+    setPreviewFile(null);
+    void startCamera();
   }
 
   function handleConfirm() {
-    if (preview) {
-      onCapture(preview);
+    if (preview && previewFile) {
+      onCapture(previewFile, preview);
       setPreview(null);
+      setPreviewFile(null);
       setPhase("starting");
     }
   }
@@ -85,6 +150,7 @@ export default function CameraCapture({ open, onCapture, onClose }: CameraCaptur
   function handleClose() {
     stopStream();
     setPreview(null);
+    setPreviewFile(null);
     setPhase("starting");
     onClose();
   }
@@ -93,149 +159,169 @@ export default function CameraCapture({ open, onCapture, onClose }: CameraCaptur
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex flex-col"
+      className="fixed inset-0 z-[10000] flex flex-col"
       style={{ backgroundColor: "#0D0D0D" }}
       role="dialog"
       aria-modal="true"
       aria-label="Camera capture"
     >
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
+      <input
+        ref={galleryRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleGalleryChange}
+      />
+
+      <div className="flex items-center justify-between px-5 pt-5 pb-4 shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: "rgba(58,115,38,0.3)" }}>
+          <div
+            className="w-8 h-8 rounded-xl flex items-center justify-center"
+            style={{ backgroundColor: "rgba(58,115,38,0.3)" }}
+          >
             <Camera size={16} style={{ color: "#86EFAC" }} />
           </div>
           <div>
-            <p className="text-white text-[14px] font-bold leading-tight">Capture Photo</p>
-            <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.45)" }}>
-              {phase === "preview" ? "Review your photo" : "Take a photo of the opened product"}
+            <p className="text-white text-[14px] font-bold leading-tight">
+              Capture Proof
+            </p>
+            <p
+              className="text-[11px]"
+              style={{ color: "rgba(255,255,255,0.5)" }}
+            >
+              Take or upload a proof image
             </p>
           </div>
         </div>
+
         <button
           onClick={handleClose}
-          className="w-9 h-9 rounded-full flex items-center justify-center"
+          className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
           style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
-          aria-label="Close camera"
+          aria-label="Close capture"
         >
           <X size={18} className="text-white" />
         </button>
       </div>
 
-      {/* Viewport */}
-      <div className="flex-1 relative overflow-hidden mx-4 rounded-3xl" style={{ maxHeight: "65vh" }}>
-        {/* Live video */}
-        <video
-          ref={videoRef}
-          className="w-full h-full object-cover"
-          style={{ display: phase === "live" ? "block" : "none" }}
-          playsInline muted autoPlay
-        />
-
-        {/* Preview image */}
-        {phase === "preview" && preview && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt="Captured" className="w-full h-full object-cover" />
+      <div
+        className="flex-1 relative overflow-hidden mx-4 rounded-3xl"
+        style={{ maxHeight: "62vh" }}
+      >
+        {(phase === "live" || phase === "starting") && (
+          <video
+            ref={videoRef}
+            className="w-full h-full object-cover"
+            playsInline
+            muted
+            autoPlay
+          />
         )}
 
-        {/* Starting overlay */}
+        {phase === "preview" && preview && (
+          <Image
+            width={1920}
+            height={1080}
+            src={preview}
+            alt="Proof preview"
+            className="w-full h-full object-cover"
+          />
+        )}
+
         {phase === "starting" && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80">
-            <Loader2 size={30} className="animate-spin" style={{ color: "#86EFAC" }} />
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+            <Loader2
+              size={32}
+              className="animate-spin"
+              style={{ color: "#86EFAC" }}
+            />
             <p className="text-white text-[13px]">Starting camera…</p>
           </div>
         )}
 
-        {/* Error overlay */}
         {phase === "error" && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/80 px-8 text-center">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "rgba(225,29,72,0.2)" }}>
-              <Camera size={24} style={{ color: "#FB7185" }} />
-            </div>
-            <div>
-              <p className="text-white font-semibold text-[14px]">Camera Unavailable</p>
-              <p className="text-[12px] mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>{errMsg}</p>
-            </div>
-            <button
-              onClick={startCamera}
-              className="px-5 py-2 rounded-xl text-sm font-semibold"
-              style={{ backgroundColor: "#3A7326", color: "white" }}
-            >
-              Try Again
-            </button>
-          </div>
-        )}
-
-        {/* Live viewfinder guide */}
-        {phase === "live" && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="relative w-56 h-56 sm:w-72 sm:h-72">
-              {["top-0 left-0 border-t-2 border-l-2 rounded-tl-2xl",
-                "top-0 right-0 border-t-2 border-r-2 rounded-tr-2xl",
-                "bottom-0 left-0 border-b-2 border-l-2 rounded-bl-2xl",
-                "bottom-0 right-0 border-b-2 border-r-2 rounded-br-2xl",
-              ].map((cls, i) => (
-                <div key={i} className={`absolute w-8 h-8 ${cls}`} style={{ borderColor: "#86EFAC" }} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Preview confirm/retake overlay */}
-        {phase === "preview" && (
-          <div className="absolute inset-0 flex items-end justify-center pb-4 pointer-events-none">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
             <div
-              className="px-4 py-2 rounded-full text-[12px] font-semibold"
-              style={{ backgroundColor: "rgba(0,0,0,0.6)", color: "rgba(255,255,255,0.8)" }}
+              className="w-12 h-12 rounded-2xl flex items-center justify-center"
+              style={{ backgroundColor: "rgba(225,29,72,0.2)" }}
             >
-              Review your photo
+              <AlertTriangle size={22} style={{ color: "#FB7185" }} />
             </div>
+            <p className="text-white text-[14px] font-semibold">
+              Camera unavailable
+            </p>
+            <p
+              className="text-[12px]"
+              style={{ color: "rgba(255,255,255,0.5)" }}
+            >
+              {errMsg}
+            </p>
           </div>
         )}
-
-        {/* Hidden canvas for capture */}
-        <canvas ref={canvasRef} className="hidden" />
       </div>
 
-      {/* Bottom controls */}
-      <div className="px-6 pt-5 pb-6 shrink-0">
-        {phase === "live" && (
-          <div className="flex items-center justify-center">
+      <canvas ref={canvasRef} className="hidden" />
+
+      <div className="px-5 pt-5 pb-6 space-y-4 shrink-0">
+        {(phase === "live" || phase === "starting") && (
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={handleGalleryPick}
+              className="w-full text-center text-[12px] font-semibold py-2 rounded-xl transition-colors"
+              style={{
+                color: "#86EFAC",
+                backgroundColor: "rgba(34,197,94,0.12)",
+              }}
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <Images size={13} />
+                Upload image
+              </span>
+            </button>
+
             <button
               onClick={handleCapture}
-              className="w-16 h-16 rounded-full flex items-center justify-center transition-all active:scale-95"
-              style={{ backgroundColor: "white", boxShadow: "0 0 0 4px rgba(255,255,255,0.3)" }}
-              aria-label="Take photo"
+              className="w-full text-center text-[12px] font-semibold py-2 rounded-xl transition-colors"
+              style={{
+                color: "#E6FFFB",
+                backgroundColor: "rgba(34,197,94,0.28)",
+              }}
             >
-              <div className="w-12 h-12 rounded-full" style={{ backgroundColor: "#3A7326" }} />
+              <span className="inline-flex items-center gap-1.5">
+                <Camera size={13} />
+                Capture proof
+              </span>
             </button>
           </div>
         )}
 
         {phase === "preview" && (
-          <div className="flex items-center gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <Button
-              onClick={handleRetake}
+              type="button"
               variant="outline"
-              className="flex-1 h-12 rounded-2xl text-sm font-semibold"
-              style={{ borderColor: "rgba(255,255,255,0.2)", color: "white", backgroundColor: "rgba(255,255,255,0.08)" }}
+              onClick={handleRetake}
+              className="h-10 rounded-xl text-sm font-semibold"
+              style={{
+                borderColor: "rgba(255,255,255,0.14)",
+                color: "white",
+                backgroundColor: "rgba(255,255,255,0.04)",
+              }}
             >
-              <RefreshCw size={15} className="mr-1.5" /> Retake
+              <RefreshCw size={14} className="mr-1.5" />
+              Retake
             </Button>
+
             <Button
+              type="button"
               onClick={handleConfirm}
-              className="flex-1 h-12 rounded-2xl text-sm font-semibold border-0"
+              className="h-10 rounded-xl text-sm font-semibold"
               style={{ backgroundColor: "#3A7326", color: "white" }}
             >
-              <Check size={15} className="mr-1.5" /> Use Photo
+              <Check size={14} className="mr-1.5" />
+              Use Photo
             </Button>
           </div>
-        )}
-
-        {phase === "starting" && (
-          <p className="text-center text-[12px]" style={{ color: "rgba(255,255,255,0.4)" }}>
-            Please allow camera access when prompted.
-          </p>
         )}
       </div>
     </div>

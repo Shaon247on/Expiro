@@ -57,8 +57,8 @@ export default async function NotificationPage({
 
   const paginationBase =
     activeStatus && activeStatus !== "all"
-      ? `/dashboard/notifications?status=${encodeURIComponent(activeStatus)}`
-      : "/dashboard/notifications";
+      ? `/dashboard/alerts?status=${encodeURIComponent(activeStatus)}`
+      : "/dashboard/alerts";
 
   if (notifications.length === 0 && safePage === 1) {
     return (

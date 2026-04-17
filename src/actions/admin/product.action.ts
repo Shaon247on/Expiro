@@ -38,9 +38,9 @@ export async function scanProductByBarcodeAction(
     const api = await createBackendClient();
 
     const { data } = await api.get<ProductScanResponse>(
-      `/api/products/scan/?barcode=${encodeURIComponent(barcode)}`,
+      `/api/products/scan/find/?barcode=${encodeURIComponent(barcode)}`,
     );
-
+    console.log("Getting the response:", data);
     return {
       success: true,
       message: data.message,
@@ -51,6 +51,8 @@ export async function scanProductByBarcodeAction(
       const serverData = error.response?.data as
         | { message?: string; detail?: string }
         | undefined;
+
+      console.log("Getting the response1:", serverData);
 
       return {
         success: false,
@@ -197,7 +199,7 @@ export async function createProductAction(payload: {
         },
       },
     );
-
+    console.log("the response of product:", data);
     revalidatePath("/dashboard/products");
 
     return { success: true, message: data.message, data: data.data };
@@ -209,6 +211,7 @@ export async function createProductAction(payload: {
             errors?: Record<string, string[]>;
           }
         | undefined;
+      console.log("the response of product1:", serverData);
 
       return {
         success: false,

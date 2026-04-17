@@ -116,3 +116,100 @@ export const DLC_TRUST_STATUS_META: Record<
     dot: "#DC2626",
   },
 };
+
+export type ScanOpenBatch = {
+  id: string;
+  batch_code: string;
+  received_quantity: number;
+  available_quantity: number;
+  purchase_date: string;
+  expiry_date: string;
+  status: string;
+  unit_price: string;
+  available_units: number;
+};
+
+export type ScannedUnitForOpen = {
+  id: string;
+  unit_number: number;
+  unique_barcode: string;
+  status: string;
+  opened_at: string | null;
+  opened_expiry_date: string | null;
+  sold_at: string | null;
+  removed_at: string | null;
+  created_at: string;
+  batch_id: string;
+  product_id: string;
+};
+
+export type ScanOpenProductData = {
+  id: string;
+  name: string;
+  barcode: string;
+  price: string;
+  category: string;
+  category_name: string;
+  status: string;
+  products_status: string;
+  track_open_expiry_days: boolean;
+  open_expiry_days: number | null;
+  batches: ScanOpenBatch[];
+  scanned_unit: ScannedUnitForOpen;
+};
+
+export type ScanOpenLookupResponse = {
+  success: true;
+  message: string;
+  data: ScanOpenProductData;
+};
+
+export type ConfirmOpenResponse = {
+  success: true;
+  message: string;
+  data: {
+    product_id: string;
+    product_name: string;
+    product_barcode: string;
+    batch: {
+      id: string;
+      batch_code: string;
+      received_quantity: number;
+      available_quantity: number;
+      purchase_date: string;
+      expiry_date: string;
+      status: string;
+      unit_price: string;
+      created_at: string;
+      updated_at: string;
+    };
+    opened_unit: {
+      id: string;
+      unit_number: number;
+      unique_barcode: string;
+      status: string;
+      opened_at: string | null;
+      opened_expiry_date: string | null;
+      sold_at: string | null;
+      removed_at: string | null;
+      created_at: string;
+    };
+    proof: {
+      id: string;
+      unit: string;
+      product: string;
+      product_name: string;
+      category_name: string;
+      opened_by: string;
+      opened_by_name: string;
+      proof_image: string;
+      product_status: string;
+      item_status: string;
+      expiry_date: string;
+      days_left: number;
+      scanned_barcode: string;
+      opened_at: string;
+      created_at: string;
+    };
+  };
+};
