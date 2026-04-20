@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import { ArrowUp, ArrowDown } from "lucide-react";
+import Link from "next/link";
 
 interface FAQItem {
   id: number;
@@ -177,13 +178,13 @@ export default function FAQPage() {
         >
           <p className="text-sm" style={{ color: "#6B7280" }}>
             Still have questions?{" "}
-            <a
+            <Link
               href="/contact"
               className="font-semibold underline underline-offset-2 transition-colors hover:opacity-80"
               style={{ color: "#A6DC94" }}
             >
               Contact our team →
-            </a>
+            </Link>
           </p>
         </motion.div>
       </div>

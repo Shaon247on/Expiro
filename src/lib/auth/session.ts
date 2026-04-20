@@ -8,9 +8,11 @@ import { COOKIE } from "@/lib/auth/cookies";
 export type SessionUser = {
   id: string;
   email: string;
-  full_name: string;
-  isAdmin: boolean;
-  profile_image: string
+  name: string;
+  role: "super_admin" | "staff" | "admin";
+  profile_image: string;
+  shop_category: "restaurant" | "super_market" | null;
+  is_active: boolean;
 };
 
 export type SessionPayload = {

@@ -16,8 +16,10 @@ export default async function TopNavbar() {
   const user = JSON.parse(session) as {
     name: string;
     role: "admin" | "staff" | "super_admin";
-    profile_pic?: string | null;
+    profile_image?: string | null;
   };
+
+  console.log("the user:",user)
 
   const nameProxy = user.name
     .trim()
@@ -54,9 +56,9 @@ export default async function TopNavbar() {
           <Avatar>
             <AvatarImage
               src={
-                user.profile_pic === ""
+                user.profile_image === ""
                   ? "https://github.com/shadcn.png"
-                  : user.profile_pic || "https://github.com/shadcn.png"
+                  : user.profile_image || "https://github.com/shadcn.png"
               }
             />
             <AvatarFallback>{nameProxy}</AvatarFallback>

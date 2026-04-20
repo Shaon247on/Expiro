@@ -103,23 +103,6 @@ export default function ManagementSection() {
           Join hundreds of supermarkets already saving time and money with Expiro Technology.
         </motion.p>
 
-        {/* CTA Button */}
-        <motion.button
-          variants={fadeUp}
-          initial="hidden"
-          animate={inView ? "visible" : "hidden"}
-          custom={2}
-          className="inline-flex items-center gap-2 rounded-full px-7 py-3 text-sm font-medium mb-12 transition-opacity hover:opacity-80"
-          style={{
-            backgroundColor: "#D4EAC8",
-            border: "1.5px solid #3A7326",
-            color: "#3A7326",
-          }}
-          aria-label="Support Expiro"
-        >
-          Support Expiro <span aria-hidden="true">→</span>
-        </motion.button>
-
         {/* Tiles */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 w-full mb-10">
           {tiles.map((tile, i) => (
