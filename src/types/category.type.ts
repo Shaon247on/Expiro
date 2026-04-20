@@ -40,3 +40,5 @@ export type UpdateCategoryResponse = {
 };
 
 export type DeleteCategoryResponse = void;
+
+

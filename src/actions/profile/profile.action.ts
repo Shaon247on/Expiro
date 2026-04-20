@@ -1,7 +1,9 @@
 "use server";
 
 import axios from "axios";
+import { cookies } from "next/headers";
 import { createBackendClient } from "@/lib/http/backend.client";
+import { COOKIE } from "@/lib/auth/cookies";
 
 export type ProfileDto = {
   id: number;
@@ -19,8 +21,8 @@ export type ProfileDto = {
 };
 
 type GetProfileResponse = {
-    message: string;
-    data: ProfileDto;
+  message: string;
+  data: ProfileDto;
 };
 
 type UpdateProfileResponse = {
@@ -57,7 +59,7 @@ export async function getProfileAction(): Promise<ActionResult<ProfileDto>> {
     return {
       success: true,
       message: "Profile fetched successfully.",
-      data: data.data
+      data: data.data,
     };
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
@@ -81,7 +83,9 @@ export async function getProfileAction(): Promise<ActionResult<ProfileDto>> {
   }
 }
 
-export async function updateProfileAction(formData: FormData): Promise<ActionResult<ProfileDto>> {
+export async function updateProfileAction(
+  formData: FormData
+): Promise<ActionResult<ProfileDto>> {
   try {
     const api = await createBackendClient();
 
@@ -95,10 +99,51 @@ export async function updateProfileAction(formData: FormData): Promise<ActionRes
       }
     );
 
+    const updatedUser = data.data;
+    const cookieStore = await cookies();
+    const isProd = process.env.NODE_ENV === "production";
+
+    const existingSessionRaw = cookieStore.get(COOKIE.session)?.value;
+
+    let existingSession: {
+      id?: number;
+      email?: string;
+      name?: string;
+      role?: string;
+      phone?: string;
+      shop_category?: string;
+      profile_pic?: string | null;
+    } = {};
+
+    if (existingSessionRaw) {
+      try {
+        existingSession = JSON.parse(existingSessionRaw);
+      } catch {
+        existingSession = {};
+      }
+    }
+
+    cookieStore.set({
+      name: COOKIE.session,
+      value: JSON.stringify({
+        id: updatedUser.id ?? existingSession.id,
+        email: updatedUser.email ?? existingSession.email ?? "",
+        name: updatedUser.name ?? existingSession.name ?? "",
+        role: updatedUser.role ?? existingSession.role ?? "",
+        phone: updatedUser.phone ?? existingSession.phone ?? "",
+        shop_category: existingSession.shop_category ?? "",
+        profile_image: updatedUser.profile_image ?? existingSession.profile_pic ?? null,
+      }),
+      httpOnly: true,
+      secure: isProd,
+      sameSite: "strict",
+      path: "/",
+    });
+
     return {
       success: true,
       message: data.message || "Profile updated successfully.",
-      data: data.data,
+      data: updatedUser,
     };
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
@@ -171,7 +216,9 @@ export async function changePasswordAction(payload: {
     };
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
-      const serverData = error.response?.data as ChangePasswordResponse | undefined;
+      const serverData = error.response?.data as
+        | ChangePasswordResponse
+        | undefined;
 
       return {
         success: false,

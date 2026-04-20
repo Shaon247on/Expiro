@@ -25,13 +25,21 @@ type ActionResult<T = undefined> =
 
 export async function getCategoriesAction(params?: {
   page?: number;
+  search?: string;
 }): Promise<ActionResult<CategoryApiItem[]>> {
   try {
     const api = await createBackendClient();
-    const page = params?.page ?? 1;
+
+    const query = new URLSearchParams();
+    query.set("page", String(params?.page ?? 1));
+
+    const search = params?.search?.trim();
+    if (search) {
+      query.set("search", search);
+    }
 
     const { data } = await api.get<CategoryListResponse>(
-      `/api/categories/?page=${page}`
+      `/api/categories/?${query.toString()}`
     );
 
     return {

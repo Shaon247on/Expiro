@@ -44,7 +44,7 @@ export default function OtpVerificationPage({
   const searchParams = useSearchParams();
 //   const email = searchParams.get("email") ?? "";
   const rawMode = searchParams.get("mode");
-//   const mode = rawMode?.trim().toLowerCase() ?? "signup";
+//   const mode = rawMode?.trim().toLowerCase() ?? "signup";  
   const isForgotPasswordMode = mode === "forgot-password";
 
   console.log("isForgotPasswordMode", isForgotPasswordMode);

@@ -32,6 +32,7 @@ import {
   updateNotificationPreferencesAction,
   type NotificationPreferencesDto,
 } from "@/actions/profile/notification-preferences.action";
+import Image from "next/image";
 
 const schema = z.object({
   firstName: z.string().min(1, "Required."),
@@ -153,9 +154,11 @@ function getInitials(
 export default function ProfileForm({
   initialProfile,
   initialNotificationPreferences,
+  isAdmin = false,
 }: {
   initialProfile: ProfileDto;
   initialNotificationPreferences: NotificationPreferencesDto;
+  isAdmin?: boolean;
 }) {
   const [notifs, setNotifs] = useState({
     expiryAlerts: initialNotificationPreferences.expiry_alerts,
@@ -392,9 +395,11 @@ export default function ProfileForm({
 
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 sm:p-8">
         <div className="flex items-center gap-4 mb-8">
-          <div className="relative flex-shrink-0">
+          <div className="relative shrink-0">
             {previewImage ? (
-              <img
+              <Image
+                width={500}
+                height={500}
                 src={previewImage}
                 alt={displayName}
                 className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-gray-200"
@@ -734,63 +739,66 @@ export default function ProfileForm({
             </FieldGroup>
           </form>
         </div>
-
-        <div className="mt-10">
-          <p
-            className="text-base font-bold mb-0.5"
-            style={{ color: "#1A3340" }}
-          >
-            Notification Preferences
-          </p>
-          <p className="text-xs text-gray-500 mb-1">
-            Control how you receive alerts
-          </p>
-
-          <div className="mt-3">
-            <NotifRow
-              id="n-expiry"
-              label="Expiry Alerts"
-              description="Get notified when products are nearing expiry"
-              checked={notifs.expiryAlerts}
-              onChange={(v) => setNotifs((p) => ({ ...p, expiryAlerts: v }))}
-            />
-            <NotifRow
-              id="n-stock"
-              label="Low Stock Alerts"
-              description="Get notified when items are running low"
-              checked={notifs.lowStockAlerts}
-              onChange={(v) => setNotifs((p) => ({ ...p, lowStockAlerts: v }))}
-            />
-            <NotifRow
-              id="n-daily"
-              label="Daily Summary Email"
-              description="Receive a daily overview of your operations"
-              checked={notifs.dailySummaryEmail}
-              onChange={(v) =>
-                setNotifs((p) => ({ ...p, dailySummaryEmail: v }))
-              }
-            />
-          </div>
-
-          <div className="flex justify-end mt-6">
-            <Button
-              type="button"
-              onClick={handleSaveNotifications}
-              disabled={isSavingNotifications}
-              className="h-11 px-8 rounded-2xl text-sm font-semibold"
-              style={{ backgroundColor: "#3A7326", color: "white" }}
+        {isAdmin === false && (
+          <div className="mt-10">
+            <p
+              className="text-base font-bold mb-0.5"
+              style={{ color: "#1A3340" }}
             >
-              {isSavingNotifications ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 size={16} className="animate-spin" />
-                  Saving...
-                </span>
-              ) : (
-                "Save Notification Settings"
-              )}
-            </Button>
+              Notification Preferences
+            </p>
+            <p className="text-xs text-gray-500 mb-1">
+              Control how you receive alerts
+            </p>
+
+            <div className="mt-3">
+              <NotifRow
+                id="n-expiry"
+                label="Expiry Alerts"
+                description="Get notified when products are nearing expiry"
+                checked={notifs.expiryAlerts}
+                onChange={(v) => setNotifs((p) => ({ ...p, expiryAlerts: v }))}
+              />
+              <NotifRow
+                id="n-stock"
+                label="Low Stock Alerts"
+                description="Get notified when items are running low"
+                checked={notifs.lowStockAlerts}
+                onChange={(v) =>
+                  setNotifs((p) => ({ ...p, lowStockAlerts: v }))
+                }
+              />
+              <NotifRow
+                id="n-daily"
+                label="Daily Summary Email"
+                description="Receive a daily overview of your operations"
+                checked={notifs.dailySummaryEmail}
+                onChange={(v) =>
+                  setNotifs((p) => ({ ...p, dailySummaryEmail: v }))
+                }
+              />
+            </div>
+
+            <div className="flex justify-end mt-6">
+              <Button
+                type="button"
+                onClick={handleSaveNotifications}
+                disabled={isSavingNotifications}
+                className="h-11 px-8 rounded-2xl text-sm font-semibold"
+                style={{ backgroundColor: "#3A7326", color: "white" }}
+              >
+                {isSavingNotifications ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 size={16} className="animate-spin" />
+                    Saving...
+                  </span>
+                ) : (
+                  "Save Notification Settings"
+                )}
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

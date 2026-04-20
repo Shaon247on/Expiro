@@ -152,7 +152,7 @@ export async function loginAction(
         role: user.role,
         phone: user.phone,
         shop_category: user.shop_category,
-        profile_pic: user.profile_image
+        profile_image: user.profile_image
       }),
       httpOnly: true,
       secure: isProd,

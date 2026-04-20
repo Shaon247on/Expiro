@@ -1,73 +1,101 @@
 "use client";
 
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { MoreHorizontal } from "lucide-react";
-import { AnalyticsSegment } from "@/types/superAdmin/analytics.type";
+import { AnalyticsDonutItem } from "@/types/superAdmin/analytics.type";
 
 interface AnalyticsDonutProps {
-  data: AnalyticsSegment[];
-  percentage?: number;
+  data: AnalyticsDonutItem[];
+  percentage: number;
 }
 
-export function AnalyticsDonut({ data, percentage = 80 }: AnalyticsDonutProps) {
+export function AnalyticsDonut({
+  data,
+  percentage,
+}: AnalyticsDonutProps) {
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+
+  const safeData =
+    total > 0
+      ? data
+      : [
+          { label: "Free", value: 1, color: "#60A5FA" },
+          { label: "Professional", value: 1, color: "#A78BFA" },
+          { label: "Custom", value: 1, color: "#F472B6" },
+        ];
+
   return (
-    <Card className="border border-gray-100 shadow-sm bg-white">
+    <Card className="border border-gray-100 shadow-sm bg-white h-full">
       <CardHeader className="pt-5 pb-2 px-5">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold text-gray-800">Analytics</CardTitle>
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400">
-            <MoreHorizontal className="w-4 h-4" />
-          </Button>
+          <CardTitle className="text-base font-semibold text-gray-800">
+            Subscription Analytics
+          </CardTitle>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-col items-center gap-4 pb-6 px-5">
-        <div className="relative w-48 h-48">
+
+      <CardContent className="px-5 pb-5">
+        <div className="relative w-full h-55">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={data}
+                data={safeData}
+                dataKey="value"
+                nameKey="label"
                 cx="50%"
                 cy="50%"
                 innerRadius={62}
                 outerRadius={88}
-                paddingAngle={3}
-                dataKey="value"
-                strokeWidth={0}
+                paddingAngle={4}
+                cornerRadius={10}
+                stroke="transparent"
               >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                {safeData.map((entry) => (
+                  <Cell key={entry.label} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip
-                formatter={(value: number, name: string) => [`${value}%`, name]}
-                contentStyle={{
-                  borderRadius: "8px",
-                  border: "1px solid #e5e7eb",
-                  fontSize: "12px",
-                }}
-              />
             </PieChart>
           </ResponsiveContainer>
-          {/* Center label */}
+
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-2xl font-bold text-gray-900">{percentage}%</span>
-            <span className="text-xs text-gray-500 font-medium">Transactions</span>
+            <p className="text-3xl font-bold text-gray-900">
+              {total > 0 ? `${percentage}%` : "0%"}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              {total > 0 ? "Top plan share" : "No subscriptions"}
+            </p>
           </div>
         </div>
 
-        {/* Legend */}
-        <div className="flex items-center justify-center gap-5 flex-wrap">
-          {data.map((seg) => (
-            <span key={seg.name} className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
-              <span
-                className="w-3 h-3 rounded-full inline-block"
-                style={{ backgroundColor: seg.color }}
-              />
-              {seg.name}
-            </span>
-          ))}
+        <div className="mt-4 space-y-3">
+          {data.map((item) => {
+            const itemPercentage =
+              total > 0 ? Math.round((item.value / total) * 100) : 0;
+
+            return (
+              <div
+                key={item.label}
+                className="flex items-center justify-between gap-3"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span
+                    className="w-3 h-3 rounded-full shrink-0"
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="text-sm font-medium text-gray-700 truncate">
+                    {item.label}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-sm text-gray-500">{item.value}</span>
+                  <span className="text-xs font-semibold text-gray-400 min-w-9 text-right">
+                    {itemPercentage}%
+                  </span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </CardContent>
     </Card>

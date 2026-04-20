@@ -9,14 +9,20 @@ import { getCategoriesAction } from "@/actions/admin/category.action";
 export const metadata = { title: "Categories — Expiro" };
 
 interface CategoryPageProps {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; search?: string }>;
 }
 
-export default async function CategoryPage({ searchParams }: CategoryPageProps) {
+export default async function CategoryPage({
+  searchParams,
+}: CategoryPageProps) {
   const params = await searchParams;
   const currentPage = Math.max(1, Number(params?.page ?? 1));
+  const search = params?.search?.trim() ?? "";
 
-  const result = await getCategoriesAction({ page: currentPage });
+  const result = await getCategoriesAction({
+    page: currentPage,
+    search,
+  });
 
   if (!result.success) {
     return (
@@ -32,6 +38,10 @@ export default async function CategoryPage({ searchParams }: CategoryPageProps) 
   const totalItems = result.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalItems / CATEGORY_PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
+
+  const paginationBase = search
+    ? `/dashboard/categories?search=${encodeURIComponent(search)}`
+    : "/dashboard/categories";
 
   return (
     <div className="flex flex-col gap-6">
@@ -53,7 +63,11 @@ export default async function CategoryPage({ searchParams }: CategoryPageProps) 
           </p>
         </div>
 
-        <Suspense fallback={<div className="h-10 w-36 rounded-xl bg-gray-100 animate-pulse" />}>
+        <Suspense
+          fallback={
+            <div className="h-10 w-36 rounded-xl bg-gray-100 animate-pulse" />
+          }
+        >
           <AddCategoryDialog />
         </Suspense>
       </div>
@@ -63,7 +77,7 @@ export default async function CategoryPage({ searchParams }: CategoryPageProps) 
       <ProductPagination
         currentPage={safePage}
         totalPages={totalPages}
-        basePath="/dashboard/categories"
+        basePath={paginationBase}
       />
     </div>
   );

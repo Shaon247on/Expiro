@@ -44,8 +44,8 @@ export async function getDlcTrustProductsAction(params?: {
     return {
       success: true,
       message:
-        data.results?.message || "Opened products fetched successfully.",
-      data: data.results?.data ?? [],
+        data.message || "Opened products fetched successfully.",
+      data: data.data ?? [],
       count: data.count,
       next: data.next,
       previous: data.previous,

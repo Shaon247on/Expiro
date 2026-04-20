@@ -59,39 +59,16 @@ export default function ScanAndCaptureModal({
   const [errMsg, setErrMsg] = useState("");
   const [product, setProduct] = useState<OpenProjectLookupData | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [showManual, setShowManual] = useState(false);
 
   const stopStream = useCallback(() => {
     cancelAnimationFrame(rafRef.current);
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     detectedRef.current = false;
-    if (videoRef.current) videoRef.current.srcObject = null;
-  }, []);
 
-  const startCamera = useCallback(async () => {
-    setErrMsg("");
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: "environment" },
-          width: { ideal: 1280 },
-          height: { ideal: 960 },
-        },
-        audio: false,
-      });
-
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-
-      setPhase("scan_live");
-    } catch (err: unknown) {
-      setErrMsg(err instanceof Error ? err.message : "Camera access denied.");
-      setPhase("cam_error");
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
   }, []);
 
@@ -115,9 +92,9 @@ export default function ScanAndCaptureModal({
     [doLookup]
   );
 
-  const startBarcodeDetection = useCallback(() => {
+  const startDetection = useCallback(() => {
     if (!("BarcodeDetector" in window)) {
-      setPhase("scan_manual");
+      setShowManual(true);
       return;
     }
 
@@ -138,17 +115,17 @@ export default function ScanAndCaptureModal({
       if (!videoRef.current || detectedRef.current) return;
 
       try {
-        const results = await detector.detect(videoRef.current);
+        const barcodes = await detector.detect(videoRef.current);
 
-        if (results.length > 0 && !detectedRef.current) {
+        if (barcodes.length > 0 && !detectedRef.current) {
           detectedRef.current = true;
-          const code = results[0].rawValue as string;
+          const code = barcodes[0].rawValue as string;
           stopStream();
           void handleBarcodeScan(code);
           return;
         }
       } catch {
-        // ignore
+        // ignore frame errors
       }
 
       rafRef.current = requestAnimationFrame(tick);
@@ -157,18 +134,46 @@ export default function ScanAndCaptureModal({
     rafRef.current = requestAnimationFrame(tick);
   }, [handleBarcodeScan, stopStream]);
 
-  useEffect(() => {
-    if (phase === "scan_live") {
-      startBarcodeDetection();
+  const startCamera = useCallback(async () => {
+    detectedRef.current = false;
+    setErrMsg("");
+    setShowManual(false);
+    setPhase("scan_starting");
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+
+      setPhase("scan_live");
+      startDetection();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Camera access denied.";
+      setErrMsg(msg);
+      setPhase("cam_error");
+      setShowManual(true);
     }
-  }, [phase, startBarcodeDetection]);
+  }, [startDetection]);
 
   useEffect(() => {
     if (open) {
       setManualCode("");
       setProduct(null);
       setErrMsg("");
-      detectedRef.current = false;
+      setShowManual(false);
+      setCameraOpen(false);
       setPhase("scan_starting");
       void startCamera();
     } else {
@@ -190,6 +195,8 @@ export default function ScanAndCaptureModal({
   function handleManualSubmit() {
     const code = manualCode.trim();
     if (!code) return;
+
+    detectedRef.current = true;
     stopStream();
     void handleBarcodeScan(code);
   }
@@ -199,6 +206,7 @@ export default function ScanAndCaptureModal({
     setManualCode("");
     setProduct(null);
     setErrMsg("");
+    setShowManual(false);
     setPhase("scan_starting");
     setCameraOpen(false);
     onClose();
@@ -209,6 +217,7 @@ export default function ScanAndCaptureModal({
     setManualCode("");
     setProduct(null);
     setErrMsg("");
+    setShowManual(false);
     setPhase("scan_starting");
     setCameraOpen(false);
     void startCamera();
@@ -238,24 +247,24 @@ export default function ScanAndCaptureModal({
         className="fixed inset-0 z-[9999] flex flex-col"
         style={{ backgroundColor: "#0D0D0D" }}
         role="dialog"
-        aria-modal
+        aria-modal="true"
         aria-label={headerTitle}
       >
-        <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 shrink-0">
           <div className="flex items-center gap-2.5">
             <div
-              className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+              className="w-8 h-8 rounded-xl flex items-center justify-center"
               style={{ backgroundColor: "rgba(58,115,38,0.3)" }}
             >
               <ScanLine size={16} style={{ color: "#86EFAC" }} />
             </div>
-            <div className="min-w-0">
+            <div>
               <p className="text-white text-[14px] font-bold leading-tight">
                 {headerTitle}
               </p>
               <p
-                className="text-[11px] truncate"
-                style={{ color: "rgba(255,255,255,0.45)" }}
+                className="text-[11px]"
+                style={{ color: "rgba(255,255,255,0.5)" }}
               >
                 {headerSub}
               </p>
@@ -264,9 +273,9 @@ export default function ScanAndCaptureModal({
 
           <button
             onClick={handleClose}
-            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+            className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
             style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
-            aria-label="Close"
+            aria-label="Close scanner"
           >
             <X size={18} className="text-white" />
           </button>
@@ -274,45 +283,59 @@ export default function ScanAndCaptureModal({
 
         <div
           className="flex-1 relative overflow-hidden mx-4 rounded-3xl"
-          style={{ maxHeight: "62vh" }}
+          style={{ maxHeight: "60vh" }}
         >
-          {phase === "scan_live" && (
-            <video
-              ref={videoRef}
-              className="w-full h-full object-cover"
-              playsInline
-              muted
-              autoPlay
-            />
-          )}
-
           {(phase === "scan_live" || phase === "scan_starting") && (
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background:
-                  "radial-gradient(ellipse 60% 40% at 50% 50%, transparent 0%, rgba(0,0,0,0.55) 100%)",
-              }}
-            />
-          )}
+            <>
+              <video
+                ref={videoRef}
+                className="w-full h-full object-cover"
+                playsInline
+                muted
+                autoPlay
+              />
 
-          {phase === "scan_live" && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="relative w-56 h-36 sm:w-72 sm:h-44">
-                {[
-                  "top-0 left-0 border-t-2 border-l-2 rounded-tl-xl",
-                  "top-0 right-0 border-t-2 border-r-2 rounded-tr-xl",
-                  "bottom-0 left-0 border-b-2 border-l-2 rounded-bl-xl",
-                  "bottom-0 right-0 border-b-2 border-r-2 rounded-br-xl",
-                ].map((cls, i) => (
-                  <div
-                    key={i}
-                    className={`absolute w-7 h-7 ${cls}`}
-                    style={{ borderColor: "#86EFAC" }}
-                  />
-                ))}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background:
+                    "radial-gradient(ellipse 60% 40% at 50% 50%, transparent 0%, rgba(0,0,0,0.55) 100%)",
+                }}
+              />
+
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="relative w-56 h-36 sm:w-72 sm:h-44">
+                  {[
+                    "top-0 left-0 border-t-2 border-l-2 rounded-tl-xl",
+                    "top-0 right-0 border-t-2 border-r-2 rounded-tr-xl",
+                    "bottom-0 left-0 border-b-2 border-l-2 rounded-bl-xl",
+                    "bottom-0 right-0 border-b-2 border-r-2 rounded-br-xl",
+                  ].map((cls, i) => (
+                    <div
+                      key={i}
+                      className={`absolute w-7 h-7 ${cls}`}
+                      style={{ borderColor: "#86EFAC" }}
+                    />
+                  ))}
+
+                  {phase === "scan_live" && !showManual && (
+                    <div
+                      className="absolute inset-x-2 overflow-hidden"
+                      style={{ top: "10%", bottom: "10%" }}
+                    >
+                      <div
+                        className="h-0.5 w-full rounded-full"
+                        style={{
+                          backgroundColor: "#22C55E",
+                          boxShadow: "0 0 8px 2px rgba(34,197,94,0.5)",
+                          animation: "scanLine 2s ease-in-out infinite",
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           {(phase === "scan_starting" ||
@@ -334,167 +357,43 @@ export default function ScanAndCaptureModal({
             </div>
           )}
 
-          {phase === "scan_manual" && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6">
-              <div className="w-full max-w-sm">
-                <p className="text-white text-[13px] font-semibold mb-2">
-                  Enter barcode manually
-                </p>
-                <input
-                  type="text"
-                  autoFocus
-                  value={manualCode}
-                  onChange={(e) => setManualCode(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
-                  placeholder="e.g. UNIT-C3DB47E0F4AB"
-                  className="w-full h-11 rounded-xl px-4 text-sm outline-none"
-                  style={{
-                    backgroundColor: "rgba(255,255,255,0.08)",
-                    color: "white",
-                    border: "1.5px solid rgba(34,197,94,0.5)",
-                  }}
-                />
-
-                <Button
-                  type="button"
-                  onClick={handleManualSubmit}
-                  disabled={!manualCode.trim()}
-                  className="w-full h-10 mt-3 rounded-xl text-sm font-semibold disabled:opacity-40"
-                  style={{ backgroundColor: "#3A7326", color: "white" }}
-                >
-                  Continue
-                </Button>
-              </div>
-            </div>
-          )}
-
           {phase === "scan_not_found" && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
               <div
                 className="w-12 h-12 rounded-2xl flex items-center justify-center"
                 style={{ backgroundColor: "rgba(225,29,72,0.2)" }}
               >
                 <AlertTriangle size={22} style={{ color: "#FB7185" }} />
               </div>
-
-              <div className="w-full max-w-sm">
-                <p className="text-white text-[14px] font-semibold">
-                  Product not found
-                </p>
-                <p
-                  className="text-[12px] mt-1 mb-4"
-                  style={{ color: "rgba(255,255,255,0.5)" }}
-                >
-                  {errMsg || "No valid unit found for this barcode."}
-                </p>
-
-                <input
-                  type="text"
-                  autoFocus
-                  value={manualCode}
-                  onChange={(e) => setManualCode(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
-                  placeholder="Enter another barcode"
-                  className="w-full h-11 rounded-xl px-4 text-sm outline-none"
-                  style={{
-                    backgroundColor: "rgba(255,255,255,0.08)",
-                    color: "white",
-                    border: "1.5px solid rgba(34,197,94,0.5)",
-                  }}
-                />
-
-                <div className="grid grid-cols-2 gap-2 mt-3">
-                  <Button
-                    type="button"
-                    onClick={handleManualSubmit}
-                    disabled={!manualCode.trim()}
-                    className="h-10 rounded-xl text-sm font-semibold disabled:opacity-40"
-                    style={{ backgroundColor: "#3A7326", color: "white" }}
-                  >
-                    Continue
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleRescan}
-                    className="h-10 rounded-xl text-sm font-semibold"
-                    style={{
-                      borderColor: "rgba(255,255,255,0.14)",
-                      color: "white",
-                      backgroundColor: "rgba(255,255,255,0.04)",
-                    }}
-                  >
-                    <RefreshCw size={14} className="mr-1.5" />
-                    Retry Camera
-                  </Button>
-                </div>
-              </div>
+              <p className="text-white text-[14px] font-semibold">
+                Product not found
+              </p>
+              <p
+                className="text-[12px]"
+                style={{ color: "rgba(255,255,255,0.5)" }}
+              >
+                {errMsg || "No valid unit found for this barcode."}
+              </p>
             </div>
           )}
 
           {phase === "cam_error" && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
               <div
                 className="w-12 h-12 rounded-2xl flex items-center justify-center"
                 style={{ backgroundColor: "rgba(225,29,72,0.2)" }}
               >
                 <AlertTriangle size={22} style={{ color: "#FB7185" }} />
               </div>
-
-              <div className="w-full max-w-sm">
-                <p className="text-white text-[14px] font-semibold">
-                  Camera unavailable
-                </p>
-                <p
-                  className="text-[12px] mt-1 mb-4"
-                  style={{ color: "rgba(255,255,255,0.5)" }}
-                >
-                  {errMsg || "Camera access failed."}
-                </p>
-
-                <input
-                  type="text"
-                  autoFocus
-                  value={manualCode}
-                  onChange={(e) => setManualCode(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
-                  placeholder="Enter barcode manually"
-                  className="w-full h-11 rounded-xl px-4 text-sm outline-none"
-                  style={{
-                    backgroundColor: "rgba(255,255,255,0.08)",
-                    color: "white",
-                    border: "1.5px solid rgba(34,197,94,0.5)",
-                  }}
-                />
-
-                <div className="grid grid-cols-2 gap-2 mt-3">
-                  <Button
-                    type="button"
-                    onClick={handleManualSubmit}
-                    disabled={!manualCode.trim()}
-                    className="h-10 rounded-xl text-sm font-semibold disabled:opacity-40"
-                    style={{ backgroundColor: "#3A7326", color: "white" }}
-                  >
-                    Continue
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleRescan}
-                    className="h-10 rounded-xl text-sm font-semibold"
-                    style={{
-                      borderColor: "rgba(255,255,255,0.14)",
-                      color: "white",
-                      backgroundColor: "rgba(255,255,255,0.04)",
-                    }}
-                  >
-                    <RefreshCw size={14} className="mr-1.5" />
-                    Retry Camera
-                  </Button>
-                </div>
-              </div>
+              <p className="text-white text-[14px] font-semibold">
+                Camera unavailable
+              </p>
+              <p
+                className="text-[12px]"
+                style={{ color: "rgba(255,255,255,0.5)" }}
+              >
+                {errMsg}
+              </p>
             </div>
           )}
 
@@ -533,33 +432,108 @@ export default function ScanAndCaptureModal({
           )}
         </div>
 
-        <div className="px-5 pt-5 pb-6 space-y-4 shrink-0">
-          {(phase === "scan_live" || phase === "scan_starting") && (
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setPhase("scan_manual")}
-                className="w-full text-center text-[12px] font-semibold py-2 rounded-xl transition-colors"
-                style={{
-                  color: "#86EFAC",
-                  backgroundColor: "rgba(34,197,94,0.12)",
-                }}
-              >
-                Enter manually
-              </button>
+        <div className="px-5 pt-5 pb-safe-bottom pb-6 space-y-4 shrink-0">
+          {phase === "scan_live" && !showManual && (
+            <p
+              className="text-center text-[12px]"
+              style={{ color: "rgba(255,255,255,0.5)" }}
+            >
+              Hold steady — scanning automatically
+            </p>
+          )}
 
-              <button
-                onClick={handleRescan}
-                className="w-full text-center text-[12px] font-semibold py-2 rounded-xl transition-colors"
-                style={{
-                  color: "#E5E7EB",
-                  backgroundColor: "rgba(255,255,255,0.08)",
-                }}
+          {(phase === "scan_live" || phase === "cam_error") && !showManual && (
+            <button
+              onClick={() => {
+                setShowManual(true);
+                setPhase("scan_manual");
+              }}
+              className="w-full text-center text-[12px] font-semibold py-2 rounded-xl transition-colors"
+              style={{
+                color: "#86EFAC",
+                backgroundColor: "rgba(34,197,94,0.12)",
+              }}
+            >
+              Enter barcode manually
+            </button>
+          )}
+
+          {(phase === "scan_manual" || showManual) && (
+            <div className="space-y-2">
+              <p
+                className="text-[12px] font-semibold"
+                style={{ color: "rgba(255,255,255,0.6)" }}
               >
-                Restart scanner
-              </button>
+                Enter barcode manually
+              </p>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  autoFocus
+                  value={manualCode}
+                  onChange={(e) => setManualCode(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
+                  placeholder="e.g. UNIT-C3DB47E0F4AB"
+                  className="flex-1 h-11 rounded-xl px-4 text-sm outline-none"
+                  style={{
+                    backgroundColor: "rgba(255,255,255,0.08)",
+                    color: "white",
+                    border: "1.5px solid rgba(34,197,94,0.5)",
+                  }}
+                />
+                <button
+                  onClick={handleManualSubmit}
+                  disabled={!manualCode.trim()}
+                  className="h-11 px-5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40"
+                  style={{ backgroundColor: "#3A7326", color: "white" }}
+                >
+                  Go
+                </button>
+              </div>
+
+              {(phase === "cam_error" || phase === "scan_manual") && (
+                <button
+                  onClick={handleRescan}
+                  className="w-full text-center text-[12px] font-semibold py-2 rounded-xl transition-colors"
+                  style={{
+                    color: "#E5E7EB",
+                    backgroundColor: "rgba(255,255,255,0.08)",
+                  }}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <RefreshCw size={13} />
+                    Retry camera
+                  </span>
+                </button>
+              )}
             </div>
           )}
+
+          {phase === "scan_not_found" && (
+            <button
+              onClick={handleRescan}
+              className="w-full text-center text-[12px] font-semibold py-2 rounded-xl transition-colors"
+              style={{
+                color: "#E5E7EB",
+                backgroundColor: "rgba(255,255,255,0.08)",
+              }}
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <RefreshCw size={13} />
+                Scan again
+              </span>
+            </button>
+          )}
         </div>
+
+        <style>{`
+          @keyframes scanLine {
+            0%   { transform: translateY(0%);    opacity: 1; }
+            50%  { transform: translateY(500%);  opacity: 0.7; }
+            100% { transform: translateY(0%);    opacity: 1; }
+          }
+        `}</style>
       </div>
 
       <CameraCapture

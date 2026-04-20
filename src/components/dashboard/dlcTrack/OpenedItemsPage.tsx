@@ -60,7 +60,8 @@ function getDlcStatus(item: DlcTrustProduct): DlcTrustFilterStatus {
 
   if (productStatus === "urgent") return "urgent";
   if (productStatus === "expiring_soon") return "expiring_soon";
-  if (productStatus === "remove_item" || item.status === "removed") return "removed";
+  if (productStatus === "remove_item" || item.status === "removed")
+    return "removed";
   return "opened";
 }
 
@@ -137,7 +138,10 @@ function ItemDetailDialog({
         <div className="h-1 w-full" style={{ backgroundColor: "#3A7326" }} />
         <div className="p-6">
           <DialogHeader className="mb-5">
-            <DialogTitle className="text-[17px] font-bold" style={{ color: "#1A3340" }}>
+            <DialogTitle
+              className="text-[17px] font-bold"
+              style={{ color: "#1A3340" }}
+            >
               {item.name}
             </DialogTitle>
             <DialogDescription className="text-[13px] text-gray-500">
@@ -147,9 +151,16 @@ function ItemDetailDialog({
 
           <div className="relative w-full h-40 rounded-2xl overflow-hidden mb-5 border border-gray-100 bg-gray-50">
             {item.category_image ? (
-              <Image src={item.category_image} alt={item.name} fill className="object-cover" />
+              <Image
+                src={item.category_image}
+                alt={item.name}
+                fill
+                className="object-cover"
+              />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-5xl">📦</div>
+              <div className="w-full h-full flex items-center justify-center text-5xl">
+                📦
+              </div>
             )}
             <div className="absolute bottom-2 left-2">
               <span
@@ -163,9 +174,15 @@ function ItemDetailDialog({
 
           <div className="space-y-2.5">
             <DetailLine label="Product Name" value={item.name} />
-            <DetailLine label="Opened Units Count" value={item.opened_units_count} />
-            <DetailLine label="Supplier Expiry (DLC)" value={formatDate(item.expiry_date)} />
-            <DetailLine label="Product Opening Date" value={formatDateTime(item.created_at)} />
+            {/* <DetailLine label="Opened Units Count" value={item.opened_units_count} /> */}
+            <DetailLine
+              label="Supplier Expiry (DLC)"
+              value={formatDate(item.expiry_date)}
+            />
+            <DetailLine
+              label="Product Opening Date"
+              value={formatDateTime(item.created_at)}
+            />
             <DetailLine
               label="Validity After Opening"
               value={
@@ -176,7 +193,11 @@ function ItemDetailDialog({
             />
             <DetailLine
               label="Expiry Date After Opening"
-              value={item.active_expiry_date ? formatDate(item.active_expiry_date) : "—"}
+              value={
+                item.active_expiry_date
+                  ? formatDate(item.active_expiry_date)
+                  : "—"
+              }
             />
             <div className="flex items-center justify-between text-[13px]">
               <span className="text-gray-500 font-medium">Days Left</span>
@@ -187,19 +208,21 @@ function ItemDetailDialog({
                     days == null
                       ? "#6B7280"
                       : days < 0
-                      ? "#E11D48"
-                      : days <= 2
-                      ? "#E11D48"
-                      : days <= 7
-                      ? "#EA580C"
-                      : "#16A34A",
+                        ? "#E11D48"
+                        : days <= 2
+                          ? "#E11D48"
+                          : days <= 7
+                            ? "#EA580C"
+                            : "#16A34A",
                 }}
               >
                 {days == null ? "—" : days < 0 ? "Expired" : `${days} days`}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-500 font-medium text-[13px]">Status</span>
+              <span className="text-gray-500 font-medium text-[13px]">
+                Status
+              </span>
               <StatusBadge status={status} />
             </div>
           </div>
@@ -217,7 +240,7 @@ const DESKTOP_COLS = [
   { label: "Opening Date", cls: "text-left" },
   { label: "Expiry After Opening", cls: "text-left" },
   { label: "Status", cls: "text-left" },
-  { label: "Opened Units", cls: "text-left" },
+  // { label: "Opened Units", cls: "text-left" },
   { label: "Action", cls: "text-right" },
 ];
 
@@ -265,7 +288,11 @@ export default function OpenedItemsPage({
   }, []);
 
   const handleComplete = useCallback(
-    async (proofFile: File, previewUrl: string, product: OpenProjectLookupData) => {
+    async (
+      proofFile: File,
+      previewUrl: string,
+      product: OpenProjectLookupData,
+    ) => {
       const formData = new FormData();
       formData.append("unique_barcode", product.scanned_unit.unique_barcode);
       formData.append("proof_image", proofFile);
@@ -312,7 +339,7 @@ export default function OpenedItemsPage({
 
       setModalOpen(false);
     },
-    []
+    [],
   );
 
   async function handleViewDetails(item: DlcTrustProduct) {
@@ -339,13 +366,10 @@ export default function OpenedItemsPage({
       params.set("filter", value);
     }
     params.set("page", "1");
-    router.push(`/dashboard/dlc-track?${params.toString()}`);
+    router.push(`/staff/dashboard/dlc-trust?${params.toString()}`);
   }
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(totalItems / DLC_TRUST_PAGE_SIZE)
-  );
+  const totalPages = Math.max(1, Math.ceil(totalItems / DLC_TRUST_PAGE_SIZE));
 
   return (
     <div className="flex flex-col gap-6">
@@ -379,21 +403,19 @@ export default function OpenedItemsPage({
       </div>
 
       {/* filter between card and list */}
-      <div className="flex justify-end">
-        <div className="w-full sm:w-52">
-          <Select value={filter || "all"} onValueChange={handleFilterChange}>
-            <SelectTrigger className="h-10 border-gray-200 rounded-xl text-sm bg-white">
-              <SelectValue placeholder="Filter status" />
-            </SelectTrigger>
-            <SelectContent>
-              {FILTER_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="flex justify-end ">
+        <Select value={filter || "all"} onValueChange={handleFilterChange}>
+          <SelectTrigger className="h-10 min-w-36 border-gray-200 rounded-xl text-sm bg-white">
+            <SelectValue placeholder="Filter status" />
+          </SelectTrigger>
+          <SelectContent>
+            {FILTER_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* list */}
@@ -432,7 +454,7 @@ export default function OpenedItemsPage({
               ) : (
                 localItems.map((item, idx) => {
                   const days = getDaysLeft(
-                    item.active_expiry_date ?? item.expiry_date
+                    item.active_expiry_date ?? item.expiry_date,
                   );
                   const status = getDlcStatus(item);
 
@@ -443,7 +465,7 @@ export default function OpenedItemsPage({
                     >
                       <td className="px-4 py-3 text-center text-[12px] font-medium text-gray-400 tabular-nums">
                         {String(
-                          (currentPage - 1) * DLC_TRUST_PAGE_SIZE + idx + 1
+                          (currentPage - 1) * DLC_TRUST_PAGE_SIZE + idx + 1,
                         ).padStart(2, "0")}
                       </td>
 
@@ -497,19 +519,19 @@ export default function OpenedItemsPage({
                               days == null
                                 ? "#6B7280"
                                 : days < 0
-                                ? "#E11D48"
-                                : days <= 2
-                                ? "#E11D48"
-                                : days <= 7
-                                ? "#EA580C"
-                                : "#16A34A",
+                                  ? "#E11D48"
+                                  : days <= 2
+                                    ? "#E11D48"
+                                    : days <= 7
+                                      ? "#EA580C"
+                                      : "#16A34A",
                           }}
                         >
                           {days == null
                             ? "—"
                             : days < 0
-                            ? "Expired"
-                            : `${days}d left`}
+                              ? "Expired"
+                              : `${days}d left`}
                         </p>
                       </td>
 
@@ -521,9 +543,9 @@ export default function OpenedItemsPage({
                         </div>
                       </td>
 
-                      <td className="px-4 py-3 text-[12px] font-medium text-gray-700">
+                      {/* <td className="px-4 py-3 text-[12px] font-medium text-gray-700">
                         {item.opened_units_count}
-                      </td>
+                      </td> */}
 
                       <td className="px-4 py-3 text-right">
                         <Button
@@ -565,7 +587,7 @@ export default function OpenedItemsPage({
 
           {localItems.map((item, idx) => {
             const days = getDaysLeft(
-              item.active_expiry_date ?? item.expiry_date
+              item.active_expiry_date ?? item.expiry_date,
             );
             const status = getDlcStatus(item);
 
@@ -620,7 +642,10 @@ export default function OpenedItemsPage({
 
                 <div className="pl-8 grid grid-cols-2 gap-x-4 gap-y-1.5">
                   {[
-                    { label: "Supplier DLC", value: formatDate(item.expiry_date) },
+                    {
+                      label: "Supplier DLC",
+                      value: formatDate(item.expiry_date),
+                    },
                     { label: "Opened", value: formatDate(item.created_at) },
                     {
                       label: "Validity",
@@ -652,16 +677,17 @@ export default function OpenedItemsPage({
                 </div>
 
                 <div className="pl-8 flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-1.5">
+                  {/* <div className="flex items-center gap-1.5">
                     <span className="text-[11px] text-gray-500">
                       Opened units: {item.opened_units_count}
                     </span>
-                  </div>
+                  </div> */}
 
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <StatusBadge status={status} />
-                    {(status === "urgent" ||
-                      status === "expiring_soon") && <TGTGBadge />}
+                    {(status === "urgent" || status === "expiring_soon") && (
+                      <TGTGBadge />
+                    )}
                   </div>
 
                   <span
@@ -671,13 +697,17 @@ export default function OpenedItemsPage({
                         days == null
                           ? "#6B7280"
                           : days < 0
-                          ? "#E11D48"
-                          : days <= 7
-                          ? "#EA580C"
-                          : "#16A34A",
+                            ? "#E11D48"
+                            : days <= 7
+                              ? "#EA580C"
+                              : "#16A34A",
                     }}
                   >
-                    {days == null ? "—" : days < 0 ? "Expired" : `${days}d left`}
+                    {days == null
+                      ? "—"
+                      : days < 0
+                        ? "Expired"
+                        : `${days}d left`}
                   </span>
                 </div>
               </div>

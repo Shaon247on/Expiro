@@ -21,7 +21,7 @@ export const dashboardStats: DashboardStat[] = [
     href: "#",
   },
   {
-    label: "Total No. of Claim",
+    label: "Total Customer",
     value: "3.5M",
     delta: "+15%",
     deltaPositive: true,

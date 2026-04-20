@@ -73,15 +73,26 @@ export async function scanProductByBarcodeAction(
 export async function getProductsAction(params?: {
   page?: number;
   status?: string;
+  search?: string;
 }): Promise<ActionResult<ProductItem[]>> {
   try {
     const api = await createBackendClient();
     const query = new URLSearchParams();
+
     query.set("page", String(params?.page ?? 1));
-    if (params?.status) query.set("status", params.status);
+
+    const status = params?.status?.trim();
+    if (status) {
+      query.set("status", status);
+    }
+
+    const search = params?.search?.trim();
+    if (search) {
+      query.set("search", search);
+    }
 
     const { data } = await api.get<ProductListResponse>(
-      `/api/products/?${query.toString()}`,
+      `/api/products/?${query.toString()}`
     );
 
     return {

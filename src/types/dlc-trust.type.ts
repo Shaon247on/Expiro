@@ -2,6 +2,7 @@ export type DlcTrustFilterStatus =
   | "opened"
   | "expiring_soon"
   | "urgent"
+  | "expired"
   | "removed";
 
 export type DlcTrustProduct = {
@@ -22,6 +23,17 @@ export type DlcTrustProduct = {
   price: string;
   opened_units_count: number;
   created_at: string;
+  proof_image: string;
+  opened_units: {
+    id: string;
+    unit_number: number;
+    unique_barcode: string;
+    status: string;
+    opened_at: string | null;
+    opened_expiry_date: string | null;
+    batch: string;
+    batch_code: string;
+  };
   updated_at: string;
 };
 
@@ -29,11 +41,8 @@ export type DlcTrustListResponse = {
   count: number;
   next: string | null;
   previous: string | null;
-  results: {
-    message: string;
-    count: number;
-    data: DlcTrustProduct[];
-  };
+  message: string;
+  data: DlcTrustProduct[];
 };
 
 export type DlcTrustDetailsResponse = {
@@ -112,6 +121,12 @@ export const DLC_TRUST_STATUS_META: Record<
   removed: {
     label: "Removed",
     bg: "#FEE2E2",
+    color: "#DC2626",
+    dot: "#DC2626",
+  },
+  expired: {
+    label: "Expired",
+    bg: "#f0b1b1",
     color: "#DC2626",
     dot: "#DC2626",
   },

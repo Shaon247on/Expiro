@@ -1,49 +1,83 @@
-// ─── Dashboard Stat Card ──────────────────────────────────────────────────────
-export interface DashboardStat {
+export type DashboardAnalyticsResponse = {
+  success: true;
+  message: string;
+  data: {
+    total_user: number;
+    total_customer: number;
+    new_customer: number;
+    total_profit: number;
+  };
+};
+
+export type SubscriptionAnalyticsResponse = {
+  success: true;
+  message: string;
+  data: {
+    plans: {
+      free: number;
+      professional: number;
+      custom: number;
+    };
+  };
+};
+
+export type SubscriptionReportResponse = {
+  success: true;
+  message: string;
+  data: {
+    total_subscriptions: number;
+    day_wise_subscriptions: Array<{
+      day: string;
+      total_subscriptions: number;
+    }>;
+  };
+};
+
+export type RecentSubscriptionItem = {
+  id: string;
+  user_name: string;
+  user_email: string;
+  plan_type: string;
+  plan_code: "free" | "professional" | "custom" | string;
+  plan_price: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  created_at: string;
+};
+
+export type RecentSubscriptionsResponse = {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: RecentSubscriptionItem[];
+};
+
+export type DashboardStat = {
   label: string;
   value: string;
   delta: string;
   deltaPositive: boolean;
   href: string;
-}
+  linkLabel: string;
+};
 
-// ─── Reports chart ────────────────────────────────────────────────────────────
-export interface ReportPoint {
+export type ReportPoint = {
   time: string;
   subscriptions: number;
-}
+};
 
-// ─── Analytics donut ─────────────────────────────────────────────────────────
-export interface AnalyticsSegment {
-  name: string;
+export type AnalyticsDonutItem = {
+  label: string;
   value: number;
   color: string;
-}
+};
 
-// ─── Recent Orders ────────────────────────────────────────────────────────────
-export interface RecentOrder {
+export type RecentOrder = {
   id: string;
   tracking: string;
   name: string;
-  imageUrl: string;
   price: string;
-  totalOrder: number;
+  totalOrder: string;
   totalAmount: string;
-}
-
-// ─── Users ────────────────────────────────────────────────────────────────────
-export type PlanType = "Free" | "Professional" | "Enterprise";
-export type BanStatus = "active" | "banned";
-
-export interface User {
-  id: string;
-  name: string;
-  shopName: string;
-  avatarUrl: string;
-  contact: string;
-  email: string;
-  plan: PlanType;
-  status: BanStatus;
-  categoryType: string;
-  mobile: string;
-}
+};
