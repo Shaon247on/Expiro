@@ -11,28 +11,24 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ActivityRow } from "@/types/analytics.type";
 
-const actionBadgeVariant: Record<
-  ActivityRow["action"],
-  { label: string; className: string }
-> = {
-  Safe: {
-    label: "Safe",
-    className: "bg-green-100 text-green-700 border-green-200 hover:bg-green-100",
-  },
-  "Expiring Soon": {
-    label: "Expiring Soon",
-    className:
-      "bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100",
-  },
-  Urgent: {
-    label: "Urgent",
-    className: "bg-red-100 text-red-700 border-red-200 hover:bg-red-100",
-  },
-  Wasted: {
-    label: "Wasted",
-    className: "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-100",
-  },
-};
+const actionBadgeVariant: Record<string, { label: string; className: string }> =
+  {
+    sold: {
+      label: "Sold",
+      className:
+        "bg-green-100 text-green-700 border-green-200 hover:bg-green-100",
+    },
+
+    batch_created: {
+      label: "Batch Created",
+      className: "bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100",
+    },
+
+    removed: {
+      label: "Removed",
+      className: "bg-red-100 text-red-700 border-red-200 hover:bg-red-100",
+    },
+  };
 
 interface RecentActivityTableProps {
   rows: ActivityRow[];
@@ -70,11 +66,12 @@ export function RecentActivityTable({ rows }: RecentActivityTableProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((row) => {
-                const badge = actionBadgeVariant[row.action];
+              {rows.map((row, index) => {
+                const badge =
+                  actionBadgeVariant[row.action] ?? actionBadgeVariant["sold"];
                 return (
                   <TableRow
-                    key={row.id}
+                    key={index}
                     className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors"
                   >
                     <TableCell className="py-4 pl-0 font-medium text-gray-800 text-sm whitespace-nowrap">
@@ -89,13 +86,16 @@ export function RecentActivityTable({ rows }: RecentActivityTableProps) {
                     <TableCell className="py-4">
                       <Badge
                         variant="outline"
-                        className={cn("text-xs font-semibold px-2.5", badge.className)}
+                        className={cn(
+                          "text-xs font-semibold px-2.5",
+                          badge.className,
+                        )}
                       >
                         {badge.label}
                       </Badge>
                     </TableCell>
                     <TableCell className="py-4 text-gray-500 text-sm whitespace-nowrap">
-                      {row.dateTime}
+                      {new Date(row.datetime).toLocaleString()}
                     </TableCell>
                   </TableRow>
                 );

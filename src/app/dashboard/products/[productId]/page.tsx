@@ -8,6 +8,7 @@ export default async function ProductDetailsPage({
 }) {
   const { productId } = await params;
   const result = await getProductDetailsAction(productId);
+  console.log("The proejct details:", result.data.batches)
 
   if (!result.success || !result.data) {
     return (

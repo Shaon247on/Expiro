@@ -60,11 +60,16 @@ function getJwtExpMsEdge(token: string): number | null {
   }
 }
 
-function parseSessionUser(sessionCookie?: string): { role?: string } | null {
+function parseSessionUser(
+  sessionCookie?: string
+): { role?: string; plan_type?: string | null } | null {
   if (!sessionCookie) return null;
 
   try {
-    return JSON.parse(sessionCookie) as { role?: string };
+    return JSON.parse(sessionCookie) as {
+      role?: string;
+      plan_type?: string | null;
+    };
   } catch {
     return null;
   }
@@ -132,6 +137,9 @@ export async function middleware(req: NextRequest) {
 
   const sessionUser = parseSessionUser(sessionCookie);
   const userRole = getSafeRole(sessionUser?.role);
+const planType = sessionUser?.plan_type;
+
+
   const requiredRole = getRequiredRole(pathname);
 
   // Authenticated user visiting /login -> send to own dashboard
@@ -157,6 +165,12 @@ export async function middleware(req: NextRequest) {
     clearAuthCookies(res);
     return res;
   }
+
+  if (isProtectedPath(pathname) && userRole && (!planType || planType === null)) {
+  const url = req.nextUrl.clone();
+  url.pathname = "/package/plans";
+  return NextResponse.redirect(url);
+}
 
   // Role-based protection
   if (requiredRole && userRole && requiredRole !== userRole) {

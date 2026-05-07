@@ -90,21 +90,68 @@ export default function NotificationDropdown() {
     setLoading(false);
   }
 
-  useEffect(() => {
-    if (open) {
-      void loadPage(1, true);
+useEffect(() => {
+  if (open) {
+    void loadPage(1, true);
+  }
+}, [open]);
+
+// Background polling every 2 minutes
+useEffect(() => {
+  let mounted = true;
+
+  const pollNotifications = async () => {
+    if (!mounted) return;
+
+    try {
+      const result = await getNotificationsAction({ page: 1 });
+
+      if (!result.success) return;
+
+      // Always update unread count
+      setUnreadCount(result.unreadCount ?? 0);
+
+      // If dropdown is open update full list
+      if (open) {
+        const nextItems = result.data ?? [];
+
+        setItems((prev) => {
+          const existing = new Set(prev.map((x) => x.id));
+
+          const merged = [...nextItems];
+
+          // Keep older paginated items
+          for (const item of prev) {
+            if (!existing.has(item.id)) {
+              merged.push(item);
+            }
+          }
+
+          return merged;
+        });
+
+        setHasMore((result.data?.length ?? 0) < (result.count ?? 0));
+      }
+    } catch {
+      // Silent fail for polling
     }
-  }, [open]);
+  };
 
-  useEffect(() => {
-    if (!open) return;
+  // Initial background sync
+  void pollNotifications();
 
-    const interval = setInterval(() => {
-      void loadPage(1, true);
-    }, 60_000);
+  const interval = setInterval(
+    () => {
+      void pollNotifications();
+    },
+    2 * 60 * 1000, // 2 minutes
+  );
 
-    return () => clearInterval(interval);
-  }, [open]);
+  return () => {
+    mounted = false;
+    clearInterval(interval);
+  };
+}, [open]);
 
   useEffect(() => {
     if (!open || !hasMore) return;

@@ -1,8 +1,5 @@
 export type ProductApiStatus = "active" | "opened" | "removed";
-export type ProductBusinessStatus =
-  | "active"
-  | "remove_item"
-  | "open_item";
+export type ProductBusinessStatus = "active" | "remove_item" | "open_item";
 
 export type ProductBatch = {
   id: string;
@@ -15,6 +12,7 @@ export type ProductBatch = {
   unit_price: string;
   created_at: string;
   updated_at: string;
+  counts: BatchCount;
   total_unit_labels?: number;
 };
 
@@ -101,8 +99,15 @@ export const PRODUCT_STATUS_META: Record<
   open_item: { dot: "#15803D", color: "#15803D" },
 };
 
-
 //existing product
+
+export type BatchCount = {
+  available_units_count: number;
+  opened_units_count: number;
+  sold_units_count: number;
+  removed_units_count: number;
+  expired_units_count: number;
+};
 
 export type ProductScanExistingResponse = {
   success: true;
@@ -127,6 +132,7 @@ export type ProductScanExistingResponse = {
       expiry_date: string;
       status: string;
       unit_price: string;
+      counts: BatchCount;
       created_at: string;
       updated_at: string;
       unit_labels?: Array<{

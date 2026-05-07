@@ -1,11 +1,13 @@
 import { getProfileAction } from "@/actions/profile/profile.action";
 import { getNotificationPreferencesAction } from "@/actions/profile/notification-preferences.action";
+import { getWhatsappPreferenceAction } from "@/actions/profile/whatsapp.action";
 import ProfileForm from "@/components/dashboard/profile/ProfileForm";
 
 export default async function ProfilePage() {
-  const [profileResult, notificationResult] = await Promise.all([
+  const [profileResult, notificationResult, whatsappResult] = await Promise.all([
     getProfileAction(),
     getNotificationPreferencesAction(),
+    getWhatsappPreferenceAction(),
   ]);
 
   if (!profileResult.success || !profileResult.data) {
@@ -25,6 +27,18 @@ export default async function ProfilePage() {
               expiry_alerts: true,
               low_stock_alerts: true,
               daily_summary_email: false,
+              created_at: "",
+              updated_at: "",
+            }
+      }
+      initialWhatsappPreference={
+        whatsappResult.success && whatsappResult.data
+          ? whatsappResult.data
+          : {
+              phone: null,
+              is_verified: false,
+              is_enabled: false,
+              last_error: null,
               created_at: "",
               updated_at: "",
             }

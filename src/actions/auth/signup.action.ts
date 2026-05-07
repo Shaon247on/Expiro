@@ -31,6 +31,7 @@ type VerifyOtpResponse = {
     email: string;
     name: string;
     role: "admin" | "super_admin" | "staff";
+    plan_type: "free" | "starter" | "professional" | null;
   };
 };
 
@@ -124,7 +125,6 @@ export async function signupAction(
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        withCredentials: true,
         timeout: 15000,
       },
     );
@@ -142,6 +142,7 @@ export async function signupAction(
             name?: string[];
             email?: string[];
             phone?: string[];
+            plan_type?: string[];
             shop_category?: string[];
             password?: string[];
             confirm_password?: string[];
@@ -149,7 +150,7 @@ export async function signupAction(
           }
         | undefined;
 
-      console.error("Signup API error:", {
+      console.error("getting started", {
         status: error.response?.status,
         data: error.response?.data,
       });
@@ -158,6 +159,7 @@ export async function signupAction(
         serverData?.name?.[0] ||
         serverData?.email?.[0] ||
         serverData?.phone?.[0] ||
+        serverData?.plan_type?.[0] ||
         serverData?.shop_category?.[0] ||
         serverData?.password?.[0] ||
         serverData?.confirm_password?.[0] ||
@@ -174,6 +176,7 @@ export async function signupAction(
           name: serverData?.name,
           email: serverData?.email,
           phone: serverData?.phone,
+          plan_type: serverData?.plan_type,
           shop_category: serverData?.shop_category,
           password: serverData?.password,
           confirm_password: serverData?.confirm_password,
@@ -281,6 +284,11 @@ export async function verifyOtpAction(
       path: "/",
       maxAge: refreshMaxAge,
     });
+
+    if (!user.plan_type) {
+      redirectPath = "/package/plans";
+      redirect(redirectPath);
+    }
 
     redirectPath = getRedirectPathByRole(user.role);
 

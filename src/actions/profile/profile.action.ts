@@ -6,16 +6,19 @@ import { createBackendClient } from "@/lib/http/backend.client";
 import { COOKIE } from "@/lib/auth/cookies";
 
 export type ProfileDto = {
-  id: number;
+  id: string;
   name: string;
   email: string;
   phone: string;
   role: string;
+  plan_type: "free" | "starter" | "professional" | "enterprise";
   first_name: string | null;
   last_name: string | null;
   gender: string | null;
   date_of_birth: string | null;
   profile_image: string | null;
+  started_at?: string | null;
+  expires_at?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -84,7 +87,7 @@ export async function getProfileAction(): Promise<ActionResult<ProfileDto>> {
 }
 
 export async function updateProfileAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<ActionResult<ProfileDto>> {
   try {
     const api = await createBackendClient();
@@ -96,7 +99,7 @@ export async function updateProfileAction(
         headers: {
           Accept: "application/json",
         },
-      }
+      },
     );
 
     const updatedUser = data.data;
@@ -106,13 +109,15 @@ export async function updateProfileAction(
     const existingSessionRaw = cookieStore.get(COOKIE.session)?.value;
 
     let existingSession: {
-      id?: number;
+      id?: string;
       email?: string;
       name?: string;
       role?: string;
       phone?: string;
-      shop_category?: string;
-      profile_pic?: string | null;
+      shop_category?: string | null;
+      plan_type?: "free" | "starter" | "professional" | "enterprise";
+      profile_image?: string | null;
+      is_active?: boolean;
     } = {};
 
     if (existingSessionRaw) {
@@ -131,8 +136,11 @@ export async function updateProfileAction(
         name: updatedUser.name ?? existingSession.name ?? "",
         role: updatedUser.role ?? existingSession.role ?? "",
         phone: updatedUser.phone ?? existingSession.phone ?? "",
-        shop_category: existingSession.shop_category ?? "",
-        profile_image: updatedUser.profile_image ?? existingSession.profile_pic ?? null,
+        shop_category: existingSession.shop_category ?? null,
+        plan_type: updatedUser.plan_type ?? existingSession.plan_type ?? "free",
+        profile_image:
+          updatedUser.profile_image ?? existingSession.profile_image ?? null,
+        is_active: existingSession.is_active ?? true,
       }),
       httpOnly: true,
       secure: isProd,
@@ -207,7 +215,7 @@ export async function changePasswordAction(payload: {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-      }
+      },
     );
 
     return {

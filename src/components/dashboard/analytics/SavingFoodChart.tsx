@@ -22,7 +22,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return (
       <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm">
         <p className="font-semibold text-gray-700 mb-1">{label}</p>
-        <p className="text-red-500 font-medium">Saved: {payload[0].value} items</p>
+        <p className="text-red-500 font-medium">Saved: {payload[0].value} units</p>
       </div>
     );
   }
@@ -49,7 +49,7 @@ export function SavingFoodChart({ data }: SavingFoodChartProps) {
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
             <XAxis
-              dataKey="day"
+              dataKey="weekday"
               tick={{ fontSize: 11, fill: "#9ca3af" }}
               axisLine={false}
               tickLine={false}
@@ -62,7 +62,7 @@ export function SavingFoodChart({ data }: SavingFoodChartProps) {
               ticks={[0, 20, 40, 60, 80]}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0,0,0,0.04)" }} />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]} name="Saved">
+            <Bar dataKey="total_food_quantity" radius={[4, 4, 0, 0]} name="Saved">
               {data.map((_, index) => (
                 <Cell key={`cell-${index}`} fill="#ef4444" />
               ))}

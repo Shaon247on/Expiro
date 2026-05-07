@@ -24,13 +24,10 @@ export type SubscriptionAnalyticsResponse = {
 export type SubscriptionReportResponse = {
   success: true;
   message: string;
-  data: {
-    total_subscriptions: number;
-    day_wise_subscriptions: Array<{
+  day_wise: Array<{
       day: string;
-      total_subscriptions: number;
+      total: number;
     }>;
-  };
 };
 
 export type RecentSubscriptionItem = {

@@ -4,9 +4,11 @@ import axios from "axios";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { COOKIE } from "@/lib/auth/cookies";
+
 type LoginPayload = {
   email: string;
   password: string;
+  next?: string;
 };
 
 type LoginResponse = {
@@ -21,6 +23,7 @@ type LoginResponse = {
     name: string;
     role: string;
     phone: string;
+    plan_type: "free" | "starter" | "professional" | "enterprise";
     shop_category: string;
     profile_image: string;
   };
@@ -63,10 +66,11 @@ function secondsUntil(msEpoch: number): number {
 }
 
 export async function loginAction(
-  payload: LoginPayload,
+  payload: LoginPayload & { next?: string }
 ): Promise<LoginActionResult> {
   const email = payload.email?.trim();
   const password = payload.password?.trim();
+  const next = payload.next?.trim();
 
   if (!email || !password) {
     return {
@@ -79,7 +83,7 @@ export async function loginAction(
     };
   }
 
-  let redirectPath: string | null = null;
+  let data: LoginResponse;
 
   try {
     const response = await axios.post<LoginResponse>(
@@ -94,90 +98,15 @@ export async function loginAction(
           Accept: "application/json",
         },
         timeout: 15000,
-      },
+      }
     );
 
-    const data = response.data;
-    console.log("the response3:", data);
-    const access = data?.token?.access;
-    const refresh = data?.token?.refresh;
-    const user = data?.user;
-
-    if (!access || !refresh || !user) {
-      return {
-        success: false,
-        message: "Login failed. Invalid server response.",
-      };
-    }
-
-    const cookieStore = await cookies();
-    const isProd = process.env.NODE_ENV === "production";
-
-    const accessExpMs = getJwtExpMs(access);
-    const refreshExpMs = getJwtExpMs(refresh);
-
-    const accessMaxAge = accessExpMs ? secondsUntil(accessExpMs) : 60 * 10;
-    const refreshMaxAge = refreshExpMs
-      ? secondsUntil(refreshExpMs)
-      : 60 * 60 * 24 * 14;
-
-    cookieStore.set({
-      name: COOKIE.access,
-      value: access,
-      httpOnly: true,
-      secure: isProd,
-      sameSite: "strict",
-      path: "/",
-      maxAge: accessMaxAge,
-    });
-
-    cookieStore.set({
-      name: COOKIE.refresh,
-      value: refresh,
-      httpOnly: true,
-      secure: isProd,
-      sameSite: "strict",
-      path: "/",
-      maxAge: refreshMaxAge,
-    });
-
-    // Temporary session cookie.
-    // Later we should replace this with a signed session token.
-    cookieStore.set({
-      name: COOKIE.session,
-      value: JSON.stringify({
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        phone: user.phone,
-        shop_category: user.shop_category,
-        profile_image: user.profile_image
-      }),
-      httpOnly: true,
-      secure: isProd,
-      sameSite: "strict",
-      path: "/",
-      maxAge: refreshMaxAge,
-    });
-
-    redirectPath =
-      user.role === "super_admin"
-        ? "/admin/dashboard"
-        : user.role === "staff"
-          ? "/staff/dashboard"
-          : "/dashboard";
-
-    return {
-      success: true,
-      message: data.message || "Login successful",
-    };
+    data = response.data;
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
       const serverMessage =
         (error.response?.data as { message?: string } | undefined)?.message ||
         "Invalid email or password.";
-    console.log("the response3:", serverMessage);
 
       return {
         success: false,
@@ -189,11 +118,77 @@ export async function loginAction(
       success: false,
       message: "Something went wrong. Please try again.",
     };
-  } finally {
-    if (redirectPath) {
-      redirect(redirectPath);
-    }
   }
+
+  const access = data?.token?.access;
+  const refresh = data?.token?.refresh;
+  const user = data?.user;
+
+  if (!access || !refresh || !user) {
+    return {
+      success: false,
+      message: "Login failed. Invalid server response.",
+    };
+  }
+
+  const cookieStore = await cookies();
+  const isProd = process.env.NODE_ENV === "production";
+
+  const accessExpMs = getJwtExpMs(access);
+  const refreshExpMs = getJwtExpMs(refresh);
+
+  const accessMaxAge = accessExpMs ? secondsUntil(accessExpMs) : 60 * 10;
+  const refreshMaxAge = refreshExpMs
+    ? secondsUntil(refreshExpMs)
+    : 60 * 60 * 24 * 14;
+
+  cookieStore.set({
+    name: COOKIE.access,
+    value: access,
+    httpOnly: true,
+    secure: isProd,
+    sameSite: "strict",
+    path: "/",
+    maxAge: accessMaxAge,
+  });
+
+  cookieStore.set({
+    name: COOKIE.refresh,
+    value: refresh,
+    httpOnly: true,
+    secure: isProd,
+    sameSite: "strict",
+    path: "/",
+    maxAge: refreshMaxAge,
+  });
+
+  cookieStore.set({
+    name: COOKIE.session,
+    value: JSON.stringify({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      phone: user.phone,
+      plan_type: user.plan_type,
+      shop_category: user.shop_category,
+      profile_image: user.profile_image,
+    }),
+    httpOnly: true,
+    secure: isProd,
+    sameSite: "strict",
+    path: "/",
+    maxAge: refreshMaxAge,
+  });
+
+  const fallbackRedirect =
+    user.role === "super_admin"
+      ? "/admin/dashboard"
+      : user.role === "staff"
+      ? "/staff/dashboard"
+      : "/dashboard";
+
+  redirect(next || fallbackRedirect);
 }
 
 export async function logoutAction() {

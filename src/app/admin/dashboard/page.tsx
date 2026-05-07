@@ -87,39 +87,45 @@ export default async function DashboardPage() {
     },
   ];
 
+  console.log(" subscriptionReportResult:", subscriptionReportResult);
+
   const reportData: ReportPoint[] = subscriptionReportResult.success
-    ? subscriptionReportResult.data.day_wise_subscriptions.map((item) => ({
+    ? subscriptionReportResult.data.map((item) => ({
         time: formatDate(item.day),
-        subscriptions: item.total_subscriptions,
+        subscriptions: item.total,
       }))
     : [];
 
-  const analyticsData: AnalyticsDonutItem[] = subscriptionAnalyticsResult.success
-    ? [
-        {
-          label: "Free",
-          value: subscriptionAnalyticsResult.data.plans.free ?? 0,
-          color: "#60A5FA",
-        },
-        {
-          label: "Professional",
-          value: subscriptionAnalyticsResult.data.plans.professional ?? 0,
-          color: "#A78BFA",
-        },
-        {
-          label: "Custom",
-          value: subscriptionAnalyticsResult.data.plans.custom ?? 0,
-          color: "#F472B6",
-        },
-      ]
-    : [
-        { label: "Free", value: 0, color: "#60A5FA" },
-        { label: "Professional", value: 0, color: "#A78BFA" },
-        { label: "Custom", value: 0, color: "#F472B6" },
-      ];
+  const analyticsData: AnalyticsDonutItem[] =
+    subscriptionAnalyticsResult.success
+      ? [
+          {
+            label: "Free",
+            value: subscriptionAnalyticsResult.data.plans.free ?? 0,
+            color: "#60A5FA",
+          },
+          {
+            label: "Professional",
+            value: subscriptionAnalyticsResult.data.plans.professional ?? 0,
+            color: "#A78BFA",
+          },
+          {
+            label: "Custom",
+            value: subscriptionAnalyticsResult.data.plans.custom ?? 0,
+            color: "#F472B6",
+          },
+        ]
+      : [
+          { label: "Free", value: 0, color: "#60A5FA" },
+          { label: "Professional", value: 0, color: "#A78BFA" },
+          { label: "Custom", value: 0, color: "#F472B6" },
+        ];
 
   const totalPlans = analyticsData.reduce((sum, item) => sum + item.value, 0);
-  const dominantPlanValue = Math.max(...analyticsData.map((item) => item.value), 0);
+  const dominantPlanValue = Math.max(
+    ...analyticsData.map((item) => item.value),
+    0,
+  );
   const donutPercentage =
     totalPlans > 0 ? Math.round((dominantPlanValue / totalPlans) * 100) : 0;
 

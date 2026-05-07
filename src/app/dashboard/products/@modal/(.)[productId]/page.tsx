@@ -9,5 +9,7 @@ export default async function ProductDetailsModalPage({
   const { productId } = await params;
   const result = await getProductDetailsAction(productId);
 
+  console.log("The proejct details:", result)
+
   return <ProductDetailsModal productId={productId} result={result} />;
 }

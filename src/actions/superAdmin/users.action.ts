@@ -76,6 +76,8 @@ export async function getAdminUsersAction(params?: {
       `/api/dashboard/admins/?${query.toString()}`
     );
 
+    console.log("Users data:", data)
+
     return {
       success: true,
       message: "Admins fetched successfully.",

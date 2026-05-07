@@ -32,6 +32,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
     search,
   });
 
+
   const users = result.success ? result.data : [];
   const totalItems = result.success ? (result.count ?? 0) : 0;
   const totalPages = Math.max(1, Math.ceil(totalItems / USERS_PAGE_SIZE));

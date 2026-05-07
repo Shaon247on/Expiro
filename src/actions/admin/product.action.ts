@@ -325,3 +325,48 @@ export async function deleteProductAction(id: string): Promise<ActionResult> {
     };
   }
 }
+
+export async function removeBatchCountAction(
+  batchId: string,
+  quantity: number,
+): Promise<ActionResult> {
+  try {
+    const api = await createBackendClient();
+
+    const { data } = await api.post<{
+      success: boolean;
+      message: string;
+    }>(`/api/product-batches/${batchId}/remove-units/`, {
+      quantity,
+    });
+
+    revalidatePath("/dashboard/products");
+
+    return {
+      success: true,
+      message: data.message || "Units removed successfully.",
+    };
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      const serverData = error.response?.data as
+        | {
+            message?: string;
+            detail?: string;
+          }
+        | undefined;
+
+      return {
+        success: false,
+        message:
+          serverData?.message ||
+          serverData?.detail ||
+          "Failed to remove units.",
+      };
+    }
+
+    return {
+      success: false,
+      message: "Something went wrong while removing units.",
+    };
+  }
+}

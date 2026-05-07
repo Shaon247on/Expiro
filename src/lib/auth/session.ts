@@ -13,6 +13,7 @@ export type SessionUser = {
   profile_image: string;
   shop_category: "restaurant" | "super_market" | null;
   is_active: boolean;
+  plan_type: "free" | "starter" | "professional" | "enterprise";
 };
 
 export type SessionPayload = {

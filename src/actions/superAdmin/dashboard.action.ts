@@ -83,7 +83,7 @@ export async function getSubscriptionAnalyticsAction(): Promise<
 }
 
 export async function getSubscriptionReportAction(): Promise<
-  ActionResult<SubscriptionReportResponse["data"]>
+  ActionResult<SubscriptionReportResponse["day_wise"]>
 > {
   try {
     const api = await createBackendClient();
@@ -92,10 +92,12 @@ export async function getSubscriptionReportAction(): Promise<
       "/api/dashboard/subscriptions/report/"
     );
 
+    console.log("the data", data)
+
     return {
       success: true,
-      message: data.message,
-      data: data.data,
+      message: "Report fetched successfully",
+      data: data.day_wise,
     };
   } catch (error: unknown) {
     return {
