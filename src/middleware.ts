@@ -19,6 +19,15 @@ function isProtectedPath(pathname: string) {
     pathname.startsWith("/staff/dashboard/")
   );
 }
+function isProtectedPathPlan(pathname: string) {
+  return (
+    pathname === "/dashboard" ||
+    pathname.startsWith("/dashboard/") ||
+    pathname.startsWith("/admin/dashboard/") ||
+    pathname === "/staff/dashboard" ||
+    pathname.startsWith("/staff/dashboard/")
+  );
+}
 
 function getRequiredRole(pathname: string): UserRole | null {
   if (
@@ -166,7 +175,7 @@ const planType = sessionUser?.plan_type;
     return res;
   }
 
-  if (isProtectedPath(pathname) && userRole && (!planType || planType === null)) {
+  if (isProtectedPathPlan(pathname) && userRole && (!planType || planType === null)) {
   const url = req.nextUrl.clone();
   url.pathname = "/package/plans";
   return NextResponse.redirect(url);
