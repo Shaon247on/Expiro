@@ -121,7 +121,7 @@ export default function PricingSection() {
             className="text-base md:text-lg"
             style={{ color: "#51564E" }}
           >
-            Choose the best plan for your business. Change plans as you grow.
+            {/* Choose the best plan for your business. Change plans as you grow. */}
           </motion.p>
         </div>
 

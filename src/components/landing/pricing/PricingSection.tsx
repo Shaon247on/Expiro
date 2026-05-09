@@ -139,8 +139,8 @@ export default function PricingSection({ plans, user }: PricingSectionProps) {
         if (plan.plan_type === "free") {
           toast.success("Free plan activated");
 
+          window.location.href = "/dashboard";
           router.refresh(); // re-fetch session
-          router.push("/dashboard");
           return;
         }
         console.log(result)

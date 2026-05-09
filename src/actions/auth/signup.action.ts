@@ -302,7 +302,7 @@ export async function verifyOtpAction(
         | { detail?: string; message?: string; otp?: string[] }
         | undefined;
 
-      console.log("service data:", serverData);
+      console.log("OTP Reponse:1", serverData);
 
       return {
         success: false,

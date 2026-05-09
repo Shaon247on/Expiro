@@ -18,10 +18,8 @@ export default function Home() {
       <TheProblemSection/>
       <TheSolutionSection/>
       <ProfessionalSection/>
-      <PricingSection/>
+      {/* <PricingSection/> */}
       <ManagementSection/>
-      {/* Placeholder for remaining sections */}
-      {/* <div className="h-[200vh] bg-linear-to-b from-[#F7FCF9] to-white" /> */}
     </main>
   );
 }
