@@ -5,13 +5,38 @@ export type DashboardAnalyticsResponse = {
     total_user: number;
     total_customer: number;
     new_customer: number;
-    total_products: number;
+    total_products: Product;
     total_batches: number;
-    total_units: number;
-    sold_units: number;
-    total_profit: number;
+    total_units: TotalUnits;
+    sold_units: SoldUnits;
+    total_profit: TotalProfit;
   };
 };
+
+export type Product = {
+  total: number;
+  difference: number;
+  trend: "up" | "down",
+  message: string;
+}
+export type TotalUnits = {
+  total: number;
+  difference: number;
+  trend: "up" | "down",
+  message: string;
+}
+export type SoldUnits = {
+  total: number;
+  difference: number;
+  trend: "up" | "down",
+  message: string;
+}
+export type TotalProfit = {
+  total: number;
+  difference: number;
+  trend: "up" | "down",
+  message: string;
+}
 
 export type ExpiryTimelineResponse = {
   success: boolean;
@@ -70,9 +95,10 @@ export type ActivityRow = {
 };
 
 export type StatCard = {
-  label: string;
+  label: string | number;
   value: string | number;
-  delta: number;
+  delta: string | number;
   deltaLabel: string;
-  variant: "green" | "yellow" | "red" | "emerald";
+  trend: "up" | "down";
+  variant: "green" | "yellow" | "red" | "emerald" | "package";
 };

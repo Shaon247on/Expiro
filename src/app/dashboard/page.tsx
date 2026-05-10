@@ -35,31 +35,38 @@ export default async function AnalyticsPage() {
     ? [
         {
           label: "Total Products",
-          value: analyticsResult.data?.total_products ?? 0,
-          delta: 12,
+          value: analyticsResult.data?.total_products.total ?? 0,
+          delta: analyticsResult.data?.total_products.difference,
           deltaLabel: "vs last month",
-          variant: "green",
+          trend: analyticsResult.data?.total_products.trend,
+          variant:"package",
         },
         {
-          label: "Total Units",
-          value: analyticsResult.data?.total_units ?? 0,
-          delta: 8,
-          deltaLabel: "inventory growth",
-          variant: "yellow",
+          label: "Total units",
+          value: analyticsResult.data?.total_units.total ?? 0,
+          delta: analyticsResult.data?.total_units.difference,
+          deltaLabel: "vs last month",
+          trend: analyticsResult.data?.total_products.trend,
+          variant:"yellow"
         },
         {
-          label: "Sold Units",
-          value: analyticsResult.data?.sold_units ?? 0,
-          delta: -2,
-          deltaLabel: "wastage reduced",
-          variant: "red",
+          label: "Sold units",
+          value: analyticsResult.data?.sold_units.total ?? 0,
+          delta: analyticsResult.data?.sold_units.difference,
+          deltaLabel: "vs last month",
+          trend: analyticsResult.data?.total_products.trend,
+          variant:"emerald"
         },
         {
           label: "Total Profit",
-          value: `$${analyticsResult.data?.total_profit ?? 0}`,
-          delta: 15,
-          deltaLabel: "profit increase",
-          variant: "emerald",
+          value: analyticsResult.data?.total_profit.total ?? 0,
+          delta: analyticsResult.data?.total_profit.difference,
+          deltaLabel: "vs last month",
+          trend: analyticsResult.data?.total_products.trend,
+          variant:
+            analyticsResult.data?.total_profit.trend === "up"
+              ? "green"
+              : "red",
         },
       ]
     : [];
@@ -70,8 +77,7 @@ export default async function AnalyticsPage() {
       ? expiryTimelineResult.data.labels.map((month, index) => ({
           month,
           safe: expiryTimelineResult.data?.safe[index] ?? 0,
-          expiringSoon:
-            expiryTimelineResult.data?.expiring_soon[index] ?? 0,
+          expiringSoon: expiryTimelineResult.data?.expiring_soon[index] ?? 0,
           urgent: expiryTimelineResult.data?.urgent[index] ?? 0,
         }))
       : [];

@@ -22,8 +22,8 @@ function isProtectedPath(pathname: string) {
 function isProtectedPathPlan(pathname: string) {
   return (
     pathname === "/dashboard" ||
-    pathname.startsWith("/dashboard/") ||
-    pathname.startsWith("/admin/dashboard/")
+    pathname.startsWith("/dashboard/")
+    // pathname.startsWith("/admin/dashboard/")
     // pathname === "/staff/dashboard" ||
     // pathname.startsWith("/staff/dashboard/")
   );

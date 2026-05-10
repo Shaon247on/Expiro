@@ -1,18 +1,32 @@
 "use client";
 
-import { Package, AlertTriangle, TrendingDown, DollarSign } from "lucide-react";
+import {
+  Package,
+  AlertTriangle,
+  TrendingDown,
+  DollarSign,
+  TrendingUp,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { StatCard } from "@/types/analytics.type";
 
 const variantConfig = {
-  green: {
+  package: {
     card: "bg-green-50 border-green-100",
     icon: "bg-green-500",
     delta: "text-green-600",
     label: "text-green-700",
     value: "text-green-900",
     IconEl: Package,
+  },
+  green: {
+    card: "bg-green-50 border-green-100",
+    icon: "bg-green-500",
+    delta: "text-green-600",
+    label: "text-green-700",
+    value: "text-green-900",
+    IconEl: TrendingUp,
   },
   yellow: {
     card: "bg-amber-50 border-amber-100",
@@ -50,7 +64,6 @@ export function AnalyticCard({ cards }: AnalyticCardProps) {
       {cards.map((card) => {
         const cfg = variantConfig[card.variant];
         const Icon = cfg.IconEl;
-        const isPositive = card.delta >= 0;
 
         return (
           <Card key={card.label} className={cn("border shadow-sm", cfg.card)}>
@@ -80,7 +93,12 @@ export function AnalyticCard({ cards }: AnalyticCardProps) {
                 </div>
               </div>
               <p className={cn("text-sm font-medium", cfg.delta)}>
-                {isPositive ? "▲" : "▼"} {Math.abs(card.delta)}{" "}
+                <span
+                  className={`${card.trend === "up" ? "text-green-500" : "text-red-500"}`}
+                >
+                  {card.trend === "up" ? "▲" : "▼"}{" "}
+                  {Math.abs(Number(card.delta))}{" "}
+                </span>
                 <span className="font-normal text-gray-500">
                   {card.deltaLabel}
                 </span>
