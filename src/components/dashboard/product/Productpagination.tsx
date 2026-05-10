@@ -1,9 +1,5 @@
 "use client";
 
-// Receives pre-built hrefs from the server — no useSearchParams needed.
-// Using router.push() instead of <a> tags ensures Next.js soft navigation
-// (no full page reload) while still triggering the server component re-render
-// with the new ?page= searchParam.
 
 import { useRouter } from "next/navigation";
 import {

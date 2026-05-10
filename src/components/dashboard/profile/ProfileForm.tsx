@@ -266,8 +266,8 @@ export default function ProfileForm({
     resolver: zodResolver(whatsappSchema),
     defaultValues: {
       phone:
-        normalizeWhatsappPhone(initialWhatsappPreference.phone) ||
-        initialProfile.phone ||
+        normalizeWhatsappPhone(initialWhatsappPreference?.phone) ||
+        initialProfile?.phone ||
         "",
       otp: "",
     },
@@ -571,7 +571,7 @@ export default function ProfileForm({
   );
 
   const isFreePlan = profile.plan_type === "free";
-  const isWhatsappVerified = whatsappPref.is_verified;
+  const isWhatsappVerified = whatsappPref?.is_verified;
   const whatsappPhoneValue = whatsappForm.watch("phone");
 
   return (

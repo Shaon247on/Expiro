@@ -150,9 +150,9 @@ function ItemDetailDialog({
           </DialogHeader>
 
           <div className="relative w-full h-40 rounded-2xl overflow-hidden mb-5 border border-gray-100 bg-gray-50">
-            {item.category_image ? (
+            {item.proof_image ? (
               <Image
-                src={item.category_image}
+                src={item.proof_image}
                 alt={item.name}
                 fill
                 className="object-cover"
@@ -472,9 +472,9 @@ export default function OpenedItemsPage({
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
                           <div className="relative w-9 h-9 rounded-xl overflow-hidden shrink-0 border border-gray-100 bg-gray-50">
-                            {item.category_image ? (
+                            {item.proof_image ? (
                               <Image
-                                src={item.category_image}
+                                src={item.proof_image}
                                 alt={item.name}
                                 fill
                                 className="object-cover"
@@ -599,9 +599,9 @@ export default function OpenedItemsPage({
                   </span>
 
                   <div className="relative w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-gray-100 bg-gray-50">
-                    {item.category_image ? (
+                    {item.proof_image ? (
                       <Image
-                        src={item.category_image}
+                        src={item.proof_image}
                         alt={item.name}
                         fill
                         className="object-cover"

@@ -38,8 +38,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
   // Build basePath including status so pagination preserves the filter
   const paginationBase = activeStatus
-    ? `/dashboard/products?status=${encodeURIComponent(activeStatus)}`
-    : "/dashboard/products";
+    ? `/staff/dashboard/products?status=${encodeURIComponent(activeStatus)}`
+    : "/staff/dashboard/products";
 
   return (
     <div className="flex flex-col gap-6">
@@ -54,7 +54,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           </p>
         </div>
 
-        <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="flex items-center gap-3 shrink-0">
           {/* Count badge */}
           <p className="text-xs text-gray-400">
             {totalItems === 0

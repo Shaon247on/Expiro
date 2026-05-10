@@ -41,6 +41,8 @@ export async function getDlcTrustProductsAction(params?: {
       `/api/opened-products/?${query.toString()}`
     );
 
+    console.log("the DLC data:", data)
+
     return {
       success: true,
       message:
