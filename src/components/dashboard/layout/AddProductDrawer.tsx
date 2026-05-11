@@ -201,7 +201,7 @@ export default function AddProductDrawer({
         form.setValue("openExpiryDays", "");
       }
     },
-    [form]
+    [form],
   );
 
   useEffect(() => {
@@ -229,7 +229,9 @@ export default function AddProductDrawer({
 
       form.setValue("barcode", locked.barcode, { shouldValidate: true });
       form.setValue("itemName", locked.name, { shouldValidate: true });
-      form.setValue("categoryType", locked.categoryId, { shouldValidate: true });
+      form.setValue("categoryType", locked.categoryId, {
+        shouldValidate: true,
+      });
       form.setValue("openExpiryDays", locked.open_expiry_days ?? "", {
         shouldValidate: true,
       });
@@ -323,11 +325,15 @@ export default function AddProductDrawer({
     setSubmitting(false);
   }
 
-  const selectedCategoryName = useMemo(() => {
-    const selectedId = form.watch("categoryType");
-    const matched = categories.find((c) => c.id === selectedId);
-    return matched?.name ?? lockedScanProduct?.categoryName ?? "";
-  }, [categories, form, lockedScanProduct]);
+  const selectedCategoryId = form.watch("categoryType");
+
+const selectedCategoryName = useMemo(() => {
+  const matched = categories.find(
+    (c) => c.id === selectedCategoryId
+  );
+
+  return matched?.name ?? lockedScanProduct?.categoryName ?? "";
+}, [categories, selectedCategoryId, lockedScanProduct]);
 
   return (
     <>
@@ -362,8 +368,7 @@ export default function AddProductDrawer({
                     }}
                   >
                     Matched existing product. Category, product name, barcode,
-                    open expiry tracking, and open expiry days have been
-                    locked.
+                    open expiry tracking, and open expiry days have been locked.
                   </div>
                 )}
 
@@ -557,7 +562,7 @@ export default function AddProductDrawer({
 
                 <div className="space-y-3">
                   <div
-                    className="flex items-start gap-3 rounded-2xl px-4 py-3.5 cursor-pointer transition-all duration-150"
+                    className="flex items-start gap-3 rounded-2xl px-4 py-3.5 transition-all duration-150"
                     style={{
                       backgroundColor: openExpiryEnabled
                         ? "#EEF3EA"
@@ -566,10 +571,6 @@ export default function AddProductDrawer({
                         openExpiryEnabled ? "#D4EAC8" : "#E5E7EB"
                       }`,
                     }}
-                    onClick={() => {
-                      if (fieldsLocked) return;
-                      handleOpenExpiryToggle(!openExpiryEnabled);
-                    }}
                   >
                     <Checkbox
                       id="open-expiry-toggle"
@@ -577,23 +578,27 @@ export default function AddProductDrawer({
                       disabled={fieldsLocked}
                       onCheckedChange={(v) => {
                         if (fieldsLocked) return;
-                        handleOpenExpiryToggle(!!v);
+                        handleOpenExpiryToggle(Boolean(v));
                       }}
-                      onClick={(e) => e.stopPropagation()}
                       className="mt-0.5 shrink-0 data-[state=checked]:bg-[#3A7326] data-[state=checked]:border-[#3A7326]"
                     />
-                    <div className="flex-1 min-w-0 select-none">
+
+                    <label
+                      htmlFor="open-expiry-toggle"
+                      className="flex-1 min-w-0 cursor-pointer select-none"
+                    >
                       <p
                         className="text-[13px] font-semibold"
                         style={{ color: "#1A3340" }}
                       >
                         Track open expiry days
                       </p>
+
                       <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
                         After product creation, barcode labels will be generated
                         for printing.
                       </p>
-                    </div>
+                    </label>
                   </div>
 
                   <Controller

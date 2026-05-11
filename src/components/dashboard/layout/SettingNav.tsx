@@ -8,9 +8,10 @@ function SettingNav() {
     const pathname = usePathname();
 
   const isSuperAdmin = pathname.startsWith("/admin")
+  const isStaff = pathname.startsWith("/staff")
   return (
     <div className="relative">
-          <Link href={isSuperAdmin ? "/admin/dashboard/settings":"/dashboard/settings"}>
+          <Link href={isSuperAdmin ? "/admin/dashboard/settings": isStaff ? "/staff/dashboard/settings":"/dashboard/settings"}>
             <button
               className="w-9 h-9 rounded-full flex items-center justify-center bg-pink-50 hover:bg-pink-100 transition-colors"
               aria-label="Settings"

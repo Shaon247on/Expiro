@@ -43,6 +43,7 @@ import {
 } from "@/actions/profile/whatsapp.action";
 
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 
 const schema = z.object({
   firstName: z.string().min(1, "Required."),
@@ -226,6 +227,9 @@ export default function ProfileForm({
     lowStockAlerts: initialNotificationPreferences.low_stock_alerts,
     dailySummaryEmail: initialNotificationPreferences.daily_summary_email,
   });
+
+  const pathname = usePathname();
+  const isStaff = pathname.startsWith("/staff");
 
   const [isSavingNotifications, setIsSavingNotifications] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -973,226 +977,251 @@ export default function ProfileForm({
                     </Button>
                   </div>
                 </div>
-
-                <div className="mt-10">
-                  <p
-                    className="text-base font-bold mb-0.5"
-                    style={{ color: "#1A3340" }}
-                  >
-                    WhatsApp Notifications
-                  </p>
-                  <p className="text-xs text-gray-500 mb-1">
-                    Choose which WhatsApp number should receive your alerts
-                  </p>
-
-                  {isFreePlan ? (
-                    <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5">
-                      <p className="text-sm font-semibold text-amber-900">
-                        This feature is not available on the Free plan.
+                {isStaff ? (
+                  <></>
+                ) : (
+                  <>
+                    <div className="mt-10">
+                      <p
+                        className="text-base font-bold mb-0.5"
+                        style={{ color: "#1A3340" }}
+                      >
+                        WhatsApp Notifications
                       </p>
-                      <p className="text-xs text-amber-800 mt-1">
-                        Upgrade your plan to enable WhatsApp notification
-                        delivery.
+                      <p className="text-xs text-gray-500 mb-1">
+                        Choose which WhatsApp number should receive your alerts
                       </p>
-                      <div className="mt-4">
-                        <Link href="/pricing">
-                          <Button
-                            type="button"
-                            className="h-10 rounded-xl text-sm font-semibold"
-                            style={{
-                              backgroundColor: "#3A7326",
-                              color: "white",
-                            }}
-                          >
-                            Upgrade Plan
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-4 rounded-2xl border border-gray-100 bg-gray-50 p-4 sm:p-5 space-y-5">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
-                          <MessageCircle size={18} className="text-[#3A7326]" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-gray-900">
-                            Current WhatsApp number
+
+                      {isFreePlan ? (
+                        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5">
+                          <p className="text-sm font-semibold text-amber-900">
+                            This feature is not available on the Free plan.
                           </p>
-                          <p className="text-xs text-gray-500 mt-1 break-all">
-                            {whatsappPref.phone
-                              ? normalizeWhatsappPhone(whatsappPref.phone)
-                              : "No WhatsApp number configured yet."}
+                          <p className="text-xs text-amber-800 mt-1">
+                            Upgrade your plan to enable WhatsApp notification
+                            delivery.
                           </p>
-                          <p className="text-xs mt-1">
-                            <span className="font-medium text-gray-700">
-                              Verification:
-                            </span>{" "}
-                            <span
-                              className={
-                                whatsappPref.is_verified
-                                  ? "text-green-600 font-semibold"
-                                  : "text-amber-600 font-semibold"
-                              }
-                            >
-                              {whatsappPref.is_verified
-                                ? "Verified"
-                                : "Not verified"}
-                            </span>
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3">
-                        <div>
-                          <Field
-                            data-invalid={!!whatsappForm.formState.errors.phone}
-                          >
-                            <FieldLabel className={labelCls} style={labelStyle}>
-                              WhatsApp Number
-                            </FieldLabel>
-                            <Input
-                              {...whatsappForm.register("phone")}
-                              className={inputCls}
-                              placeholder="+8801710670341"
-                            />
-                            {whatsappForm.formState.errors.phone && (
-                              <FieldError
-                                errors={[whatsappForm.formState.errors.phone]}
-                              />
-                            )}
-                            <p className="text-xs text-gray-500 mt-2">
-                              Your current signup phone is{" "}
-                              <span className="font-medium text-gray-700">
-                                {profile.phone}
-                              </span>
-                              . If that number does not have WhatsApp, use a
-                              different one.{" "}
-                              <strong>
-                                Use country code before the number.
-                              </strong>
-                            </p>
-                          </Field>
-                        </div>
-
-                        <div className="flex items-end">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="h-12 rounded-2xl"
-                            onClick={handleUseExistingPhone}
-                          >
-                            Use Existing Phone
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <Button
-                          type="button"
-                          onClick={handleSendWhatsappOtp}
-                          disabled={isSendingWhatsappOtp}
-                          className="h-11 rounded-2xl text-sm font-semibold"
-                          style={{ backgroundColor: "#3A7326", color: "white" }}
-                        >
-                          {isSendingWhatsappOtp ? (
-                            <span className="flex items-center gap-2">
-                              <Loader2 size={16} className="animate-spin" />
-                              Sending OTP...
-                            </span>
-                          ) : (
-                            "Send OTP to WhatsApp"
-                          )}
-                        </Button>
-
-                        {isWhatsappVerified &&
-                        normalizeWhatsappPhone(whatsappPref.phone) ===
-                          whatsappPhoneValue.trim() ? (
-                          <div className="h-11 px-4 rounded-2xl bg-green-50 border border-green-200 inline-flex items-center gap-2 text-sm text-green-700 font-medium">
-                            <ShieldCheck size={16} />
-                            Verified Number
-                          </div>
-                        ) : null}
-                      </div>
-
-                      {showWhatsappOtpInput && (
-                        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
-                          <div>
-                            <Field
-                              data-invalid={!!whatsappForm.formState.errors.otp}
-                            >
-                              <FieldLabel
-                                className={labelCls}
-                                style={labelStyle}
+                          <div className="mt-4">
+                            <Link href="/pricing">
+                              <Button
+                                type="button"
+                                className="h-10 rounded-xl text-sm font-semibold"
+                                style={{
+                                  backgroundColor: "#3A7326",
+                                  color: "white",
+                                }}
                               >
-                                Verification OTP
-                              </FieldLabel>
-                              <Input
-                                {...whatsappForm.register("otp")}
-                                className={inputCls}
-                                placeholder="Enter OTP"
+                                Upgrade Plan
+                              </Button>
+                            </Link>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-4 rounded-2xl border border-gray-100 bg-gray-50 p-4 sm:p-5 space-y-5">
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
+                              <MessageCircle
+                                size={18}
+                                className="text-[#3A7326]"
                               />
-                              {whatsappForm.formState.errors.otp && (
-                                <FieldError
-                                  errors={[whatsappForm.formState.errors.otp]}
-                                />
-                              )}
-                            </Field>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-gray-900">
+                                Current WhatsApp number
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1 break-all">
+                                {whatsappPref?.phone
+                                  ? normalizeWhatsappPhone(whatsappPref?.phone)
+                                  : "No WhatsApp number configured yet."}
+                              </p>
+                              <p className="text-xs mt-1">
+                                <span className="font-medium text-gray-700">
+                                  Verification:
+                                </span>{" "}
+                                <span
+                                  className={
+                                    whatsappPref?.is_verified
+                                      ? "text-green-600 font-semibold"
+                                      : "text-amber-600 font-semibold"
+                                  }
+                                >
+                                  {whatsappPref?.is_verified
+                                    ? "Verified"
+                                    : "Not verified"}
+                                </span>
+                              </p>
+                            </div>
                           </div>
 
-                          <div className="flex items-end">
+                          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3">
+                            <div>
+                              <Field
+                                data-invalid={
+                                  !!whatsappForm.formState.errors.phone
+                                }
+                              >
+                                <FieldLabel
+                                  className={labelCls}
+                                  style={labelStyle}
+                                >
+                                  WhatsApp Number
+                                </FieldLabel>
+                                <Input
+                                  {...whatsappForm.register("phone")}
+                                  className={inputCls}
+                                  placeholder="+8801710670341"
+                                />
+                                {whatsappForm.formState.errors.phone && (
+                                  <FieldError
+                                    errors={[
+                                      whatsappForm.formState.errors.phone,
+                                    ]}
+                                  />
+                                )}
+                                <p className="text-xs text-gray-500 mt-2">
+                                  Your current signup phone is{" "}
+                                  <span className="font-medium text-gray-700">
+                                    {profile.phone}
+                                  </span>
+                                  . If that number does not have WhatsApp, use a
+                                  different one.{" "}
+                                  <strong>
+                                    Use country code before the number.
+                                  </strong>
+                                </p>
+                              </Field>
+                            </div>
+
+                            <div className="flex items-end">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="h-12 rounded-2xl"
+                                onClick={handleUseExistingPhone}
+                              >
+                                Use Existing Phone
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row gap-3">
                             <Button
                               type="button"
-                              onClick={handleVerifyWhatsappOtp}
-                              disabled={isVerifyingWhatsappOtp}
-                              className="h-12 rounded-2xl text-sm font-semibold"
+                              onClick={handleSendWhatsappOtp}
+                              disabled={isSendingWhatsappOtp}
+                              className="h-11 rounded-2xl text-sm font-semibold"
                               style={{
                                 backgroundColor: "#3A7326",
                                 color: "white",
                               }}
                             >
-                              {isVerifyingWhatsappOtp ? (
+                              {isSendingWhatsappOtp ? (
                                 <span className="flex items-center gap-2">
                                   <Loader2 size={16} className="animate-spin" />
-                                  Verifying...
+                                  Sending OTP...
                                 </span>
                               ) : (
-                                "Verify OTP"
+                                "Send OTP to WhatsApp"
                               )}
                             </Button>
+
+                            {isWhatsappVerified &&
+                            normalizeWhatsappPhone(whatsappPref.phone) ===
+                              whatsappPhoneValue.trim() ? (
+                              <div className="h-11 px-4 rounded-2xl bg-green-50 border border-green-200 inline-flex items-center gap-2 text-sm text-green-700 font-medium">
+                                <ShieldCheck size={16} />
+                                Verified Number
+                              </div>
+                            ) : null}
+                          </div>
+
+                          {showWhatsappOtpInput && (
+                            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
+                              <div>
+                                <Field
+                                  data-invalid={
+                                    !!whatsappForm.formState.errors.otp
+                                  }
+                                >
+                                  <FieldLabel
+                                    className={labelCls}
+                                    style={labelStyle}
+                                  >
+                                    Verification OTP
+                                  </FieldLabel>
+                                  <Input
+                                    {...whatsappForm.register("otp")}
+                                    className={inputCls}
+                                    placeholder="Enter OTP"
+                                  />
+                                  {whatsappForm.formState.errors.otp && (
+                                    <FieldError
+                                      errors={[
+                                        whatsappForm.formState.errors.otp,
+                                      ]}
+                                    />
+                                  )}
+                                </Field>
+                              </div>
+
+                              <div className="flex items-end">
+                                <Button
+                                  type="button"
+                                  onClick={handleVerifyWhatsappOtp}
+                                  disabled={isVerifyingWhatsappOtp}
+                                  className="h-12 rounded-2xl text-sm font-semibold"
+                                  style={{
+                                    backgroundColor: "#3A7326",
+                                    color: "white",
+                                  }}
+                                >
+                                  {isVerifyingWhatsappOtp ? (
+                                    <span className="flex items-center gap-2">
+                                      <Loader2
+                                        size={16}
+                                        className="animate-spin"
+                                      />
+                                      Verifying...
+                                    </span>
+                                  ) : (
+                                    "Verify OTP"
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {whatsappPref?.last_error ? (
+                            <p className="text-xs text-red-500">
+                              {whatsappPref?.last_error}
+                            </p>
+                          ) : null}
+
+                          <div className="flex items-center justify-between gap-6 pt-2 border-t border-gray-200">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-800">
+                                Enable WhatsApp Notifications
+                              </p>
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                This option becomes available only after the
+                                phone number is verified.
+                              </p>
+                            </div>
+
+                            <Toggle
+                              id="whatsapp-enabled"
+                              checked={whatsappPref?.is_enabled}
+                              onChange={handleToggleWhatsapp}
+                              disabled={
+                                !whatsappPref?.is_verified || isTogglingWhatsapp
+                              }
+                            />
                           </div>
                         </div>
                       )}
-
-                      {whatsappPref.last_error ? (
-                        <p className="text-xs text-red-500">
-                          {whatsappPref.last_error}
-                        </p>
-                      ) : null}
-
-                      <div className="flex items-center justify-between gap-6 pt-2 border-t border-gray-200">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-800">
-                            Enable WhatsApp Notifications
-                          </p>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            This option becomes available only after the phone
-                            number is verified.
-                          </p>
-                        </div>
-
-                        <Toggle
-                          id="whatsapp-enabled"
-                          checked={whatsappPref.is_enabled}
-                          onChange={handleToggleWhatsapp}
-                          disabled={
-                            !whatsappPref.is_verified || isTogglingWhatsapp
-                          }
-                        />
-                      </div>
                     </div>
-                  )}
-                </div>
+                  </>
+                )}
               </>
             )}
           </div>
