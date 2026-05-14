@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { MoreVertical, Pencil, Eye, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -41,6 +41,10 @@ export default function ProductActions({ product }: ProductActionsProps) {
     });
   }
 
+  const pathname = usePathname()
+
+  const isStaff = pathname.startsWith("/staff")
+
   return (
     <>
       <DropdownMenu>
@@ -65,7 +69,7 @@ export default function ProductActions({ product }: ProductActionsProps) {
 
           <DropdownMenuItem
             className="flex items-center gap-2 rounded-lg text-sm cursor-pointer px-3 py-2"
-            onClick={() => router.push(`/dashboard/products/${product.id}`)}
+            onClick={() => router.push(`${isStaff ? `/staff/dashboard/products/${product.id}`:`/dashboard/products/${product.id}`}`)}
           >
             <Eye size={14} style={{ color: "#2563EB" }} />
             <span>View</span>

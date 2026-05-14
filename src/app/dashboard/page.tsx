@@ -30,6 +30,8 @@ export default async function AnalyticsPage() {
     getRecentActivitiesAction(),
   ]);
 
+  console.log("testing recent:",recentActivityResult)
+
   // Analytics Cards
   const statCards: StatCard[] = analyticsResult.success
     ? [

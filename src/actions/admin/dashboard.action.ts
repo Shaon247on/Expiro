@@ -120,15 +120,15 @@ export async function getSavingFoodSummaryAction(): Promise<
   }
 }
 
-export async function getRecentActivitiesAction(
-  limit = 10,
-): Promise<ActionResult<RecentActivitiesResponse["data"]>> {
+export async function getRecentActivitiesAction(): Promise<ActionResult<RecentActivitiesResponse["data"]>> {
   try {
     const api = await createBackendClient();
 
     const { data } = await api.get<RecentActivitiesResponse>(
-      `/api/dashboard/admin/recent-activities/?limit=${limit}`,
+      `/api/dashboard/recent-activities/`,
     );
+
+    console.log("testing recent:", data)
 
     return {
       success: true,
@@ -138,6 +138,9 @@ export async function getRecentActivitiesAction(
     };
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
+
+    console.log("testing recent:", axios.isAxiosError(error))
+
       return {
         success: false,
         message:

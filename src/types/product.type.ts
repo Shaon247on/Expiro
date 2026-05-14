@@ -1,6 +1,11 @@
 export type ProductApiStatus = "active" | "opened" | "removed";
 export type ProductBusinessStatus = "active" | "remove_item" | "open_item";
-
+export type ProductStatus =
+  | "Urgent"
+  | "Expiring soon"
+  | "Safe Item"
+  | "Remove Item"
+  | "Open Item";
 export type ProductBatch = {
   id: string;
   batch_code: string;

@@ -95,7 +95,7 @@ export function RecentActivityTable({ rows }: RecentActivityTableProps) {
                       </Badge>
                     </TableCell>
                     <TableCell className="py-4 text-gray-500 text-sm whitespace-nowrap">
-                      {new Date(row.datetime).toLocaleString()}
+                      {new Date(row.created_at).toLocaleString()}
                     </TableCell>
                   </TableRow>
                 );

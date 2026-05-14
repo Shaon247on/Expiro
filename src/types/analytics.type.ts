@@ -88,7 +88,7 @@ export type ActivityRow = {
   product: string;
   quantity: number;
   action: string;
-  datetime: string;
+  created_at: string;
   tracking_no: string;
   unique_barcode: string | null;
   price: string;

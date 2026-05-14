@@ -31,12 +31,18 @@ import { signupAction } from "@/actions/auth/signup.action";
 const schema = z
   .object({
     shop_category: z.string().min(1, "Please select a shop category."),
-    name: z.string().min(2, "Name must be at least 2 characters."),
+    name: z
+      .string()
+      .min(2, "Name must be at least 2 characters.")
+      .regex(
+        /^[A-Za-z\s]+$/,
+        "Name cannot contain numbers or special characters.",
+      ),
     email: z.string().email("Please enter a valid email address."),
     phone: z
-  .string()
-  .trim()
-  .regex(/^[\d+-]{8,15}$/, "Phone number must be 8 to 15 characters"),
+      .string()
+      .trim()
+      .regex(/^[\d+-]{8,15}$/, "Phone number must be 8 to 15 characters"),
     password: z.string().min(8, "Password must be at least 8 characters."),
     confirm_password: z
       .string()
@@ -52,12 +58,12 @@ type FormValues = z.infer<typeof schema>;
 const categories = [
   {
     value: "restaurant",
-    label: "Restaurant"
+    label: "Restaurant",
   },
   {
     value: "supermarket",
-    label: "Super Market"
-  }
+    label: "Super Market",
+  },
 ];
 
 export default function SignupPage() {
@@ -81,7 +87,7 @@ export default function SignupPage() {
   function onSubmit(data: FormValues) {
     startTransition(async () => {
       const result = await signupAction(data);
-console.log(result)
+      console.log(result);
       if (!result.success) {
         if (result.fieldErrors?.confirm_password?.[0]) {
           form.setError("confirm_password", {
@@ -159,7 +165,12 @@ console.log(result)
                     </select>
 
                     <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                      >
                         <path
                           d="M3 5l4 4 4-4"
                           stroke="currentColor"
@@ -171,7 +182,9 @@ console.log(result)
                     </div>
                   </div>
 
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
                 </Field>
               )}
             />
@@ -198,7 +211,9 @@ console.log(result)
                     disabled={isPending}
                   />
 
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
                 </Field>
               )}
             />
@@ -226,7 +241,9 @@ console.log(result)
                     disabled={isPending}
                   />
 
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
                 </Field>
               )}
             />
@@ -254,7 +271,9 @@ console.log(result)
                     disabled={isPending}
                   />
 
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
                 </Field>
               )}
             />
@@ -287,14 +306,18 @@ console.log(result)
                       type="button"
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                       onClick={() => setShowPassword((v) => !v)}
-                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
                       disabled={isPending}
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
 
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
                 </Field>
               )}
             />
@@ -332,11 +355,17 @@ console.log(result)
                       }
                       disabled={isPending}
                     >
-                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      {showConfirmPassword ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
                     </button>
                   </div>
 
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
                 </Field>
               )}
             />

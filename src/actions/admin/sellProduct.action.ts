@@ -6,6 +6,7 @@ import type {
   SellProductRequest,
   SellProductResponse,
 } from "@/types/sellProduct.type";
+import { revalidatePath } from "next/cache";
 
 type SellActionResult =
   | {
@@ -20,10 +21,9 @@ type SellActionResult =
     };
 
 export async function sellScannedProductAction(
-  payload: SellProductRequest
+  payload: SellProductRequest,
 ): Promise<SellActionResult> {
-
-    console.log("the payloads:", payload)
+  console.log("the payloads:", payload);
   try {
     const api = await createBackendClient();
 
@@ -35,11 +35,12 @@ export async function sellScannedProductAction(
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-      }
+      },
     );
 
-    console.log("the response2:", data)
-
+    console.log("the response2:", data);
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/products");
     return {
       success: true,
       message: data.message,
@@ -56,7 +57,7 @@ export async function sellScannedProductAction(
             batch_id?: string[];
           }
         | undefined;
-    console.log("the response2:", serverData)
+      console.log("the response2:", serverData);
 
       return {
         success: false,
