@@ -128,7 +128,7 @@ export async function signupAction(
         timeout: 15000,
       },
     );
-    console.log("getting started", response);
+    console.log("getting started", response.data);
     return {
       success: true,
       message: response.data.detail || "Verification OTP sent successfully.",

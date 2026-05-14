@@ -19,15 +19,16 @@ function isProtectedPath(pathname: string) {
     pathname.startsWith("/staff/dashboard/")
   );
 }
-function isProtectedPathPlan(pathname: string) {
-  return (
-    pathname === "/dashboard" ||
-    pathname.startsWith("/dashboard/")
-    // pathname.startsWith("/admin/dashboard/")
-    // pathname === "/staff/dashboard" ||
-    // pathname.startsWith("/staff/dashboard/")
-  );
-}
+
+// function isProtectedPathPlan(pathname: string) {
+//   return (
+//     pathname === "/dashboard" ||
+//     pathname.startsWith("/dashboard/")
+//     // pathname.startsWith("/admin/dashboard/")
+//     // pathname === "/staff/dashboard" ||
+//     // pathname.startsWith("/staff/dashboard/")
+//   );
+// }
 
 function getRequiredRole(pathname: string): UserRole | null {
   if (
@@ -70,7 +71,7 @@ function getJwtExpMsEdge(token: string): number | null {
 }
 
 function parseSessionUser(
-  sessionCookie?: string
+  sessionCookie?: string,
 ): { role?: string; plan_type?: string | null } | null {
   if (!sessionCookie) return null;
 
@@ -146,8 +147,7 @@ export async function middleware(req: NextRequest) {
 
   const sessionUser = parseSessionUser(sessionCookie);
   const userRole = getSafeRole(sessionUser?.role);
-const planType = sessionUser?.plan_type;
-
+  const planType = sessionUser?.plan_type;
 
   const requiredRole = getRequiredRole(pathname);
 
@@ -175,11 +175,11 @@ const planType = sessionUser?.plan_type;
     return res;
   }
 
-  if (isProtectedPathPlan(pathname) && userRole && (!planType || planType === null)) {
-  const url = req.nextUrl.clone();
-  url.pathname = "/package/plans";
-  return NextResponse.redirect(url);
-}
+  //   if (isProtectedPathPlan(pathname) && userRole && (!planType || planType === null)) {
+  //   const url = req.nextUrl.clone();
+  //   url.pathname = "/package/plans";
+  //   return NextResponse.redirect(url);
+  // }
 
   // Role-based protection
   if (requiredRole && userRole && requiredRole !== userRole) {

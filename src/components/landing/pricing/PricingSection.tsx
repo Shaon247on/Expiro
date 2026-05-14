@@ -151,7 +151,7 @@ export default function PricingSection({ plans, user }: PricingSectionProps) {
         }
       } catch {
         toast.error("Something went wrong.");
-      } finally {
+      }                                                                                          finally {
         setPendingPlan(null);
       }
     });
@@ -160,32 +160,6 @@ export default function PricingSection({ plans, user }: PricingSectionProps) {
   return (
     <section ref={ref} className="w-full py-16 md:py-24 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* {!isLoggedIn && (
-          <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shrink-0">
-                <Lock size={18} className="text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-amber-900">
-                  Login required for paid subscriptions
-                </p>
-                <p className="text-sm text-amber-800">
-                  Please sign in first. After login, you will return to the
-                  pricing page.
-                </p>
-              </div>
-            </div>
-
-            <Link
-              href={`/login?next=${encodeURIComponent("/pricing")}`}
-              className="inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold bg-[#3A7326] text-white hover:opacity-90"
-            >
-              Login First
-            </Link>
-          </div>
-        )} */}
-
         <div className="flex justify-center mb-5">
           <motion.span
             variants={fadeUp}

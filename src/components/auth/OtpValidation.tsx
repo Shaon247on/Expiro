@@ -168,6 +168,8 @@ export default function OtpVerificationPage({
 
       if (isForgotPasswordMode) {
         router.push("/new-password");
+      }else{
+        router.push("/dashboard")
       }
     });
   }
