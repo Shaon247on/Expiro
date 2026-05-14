@@ -67,12 +67,11 @@ export default async function AnalyticsPage() {
         },
         {
           label: "Total Profit",
-          value: analyticsResult.data?.total_profit.total ?? 0,
-          delta: analyticsResult.data?.total_profit.difference,
+          delta: analyticsResult.data?.total_staff.difference,
           deltaLabel: "vs last month",
-          trend: analyticsResult.data?.total_products.trend,
+          trend: analyticsResult.data?.total_staff.trend,
           variant:
-            analyticsResult.data?.total_profit.trend === "up"
+            analyticsResult.data?.total_staff.trend === "up"
               ? "green"
               : "red",
         },

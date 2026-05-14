@@ -60,13 +60,13 @@ export default async function AnalyticsPage() {
           variant:"emerald"
         },
         {
-          label: "Total Profit",
-          value: analyticsResult.data?.total_profit.total ?? 0,
-          delta: analyticsResult.data?.total_profit.difference,
+          label: "Total Staff",
+          value: analyticsResult.data?.total_staff.total ?? 0,
+          delta: analyticsResult.data?.total_staff.difference,
           deltaLabel: "vs last month",
           trend: analyticsResult.data?.total_products.trend,
           variant:
-            analyticsResult.data?.total_profit.trend === "up"
+            analyticsResult.data?.total_staff.trend === "up"
               ? "green"
               : "red",
         },

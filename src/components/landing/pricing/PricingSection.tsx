@@ -160,7 +160,7 @@ export default function PricingSection({ plans, user }: PricingSectionProps) {
   return (
     <section ref={ref} className="w-full py-16 md:py-24 px-4">
       <div className="max-w-7xl mx-auto">
-        {!isLoggedIn && (
+        {/* {!isLoggedIn && (
           <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shrink-0">
@@ -184,7 +184,7 @@ export default function PricingSection({ plans, user }: PricingSectionProps) {
               Login First
             </Link>
           </div>
-        )}
+        )} */}
 
         <div className="flex justify-center mb-5">
           <motion.span

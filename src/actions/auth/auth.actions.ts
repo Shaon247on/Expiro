@@ -66,7 +66,7 @@ function secondsUntil(msEpoch: number): number {
 }
 
 export async function loginAction(
-  payload: LoginPayload & { next?: string }
+  payload: LoginPayload & { next?: string },
 ): Promise<LoginActionResult> {
   const email = payload.email?.trim();
   const password = payload.password?.trim();
@@ -98,8 +98,9 @@ export async function loginAction(
           Accept: "application/json",
         },
         timeout: 15000,
-      }
+      },
     );
+    console.log("sign up logs:", response.data);
 
     data = response.data;
   } catch (error: unknown) {
@@ -107,12 +108,14 @@ export async function loginAction(
       const serverMessage =
         (error.response?.data as { message?: string } | undefined)?.message ||
         "Invalid email or password.";
-
+      console.log("sign up logs:", serverMessage);
       return {
         success: false,
         message: serverMessage,
       };
     }
+
+    console.log("sign up logs:", axios.isAxiosError(error));
 
     return {
       success: false,
@@ -185,8 +188,8 @@ export async function loginAction(
     user.role === "super_admin"
       ? "/admin/dashboard"
       : user.role === "staff"
-      ? "/staff/dashboard"
-      : "/dashboard";
+        ? "/staff/dashboard"
+        : "/dashboard";
 
   redirect(next || fallbackRedirect);
 }

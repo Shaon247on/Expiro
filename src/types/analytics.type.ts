@@ -9,7 +9,7 @@ export type DashboardAnalyticsResponse = {
     total_batches: number;
     total_units: TotalUnits;
     sold_units: SoldUnits;
-    total_profit: TotalProfit;
+    total_staff: TotalProfit;
   };
 };
 
@@ -31,7 +31,7 @@ export type SoldUnits = {
   trend: "up" | "down",
   message: string;
 }
-export type TotalProfit = {
+export type TotalStaff = {
   total: number;
   difference: number;
   trend: "up" | "down",
