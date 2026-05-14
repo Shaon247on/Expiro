@@ -64,6 +64,18 @@ const categories = [
     value: "supermarket",
     label: "Super Market",
   },
+  {
+    value: "large_retailer",
+    label: "Large Retailer",
+  },
+  {
+    value: "caterer",
+    label: "Caterer",
+  },
+  {
+    value: "grocery_store",
+    label: "Grocery Store",
+  },
 ];
 
 export default function SignupPage() {
