@@ -29,7 +29,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 // TODO: Adjust this import route
@@ -89,6 +89,9 @@ export default function BatchTable({
   onView,
 }: BatchTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  
+    const isStaff = pathname.startsWith("/staff")
 
   const [selectedBatch, setSelectedBatch] =
     useState<ProductBatch | null>(null);
@@ -292,7 +295,7 @@ export default function BatchTable({
                                 onView(batch.id);
                               } else {
                                 router.push(
-                                  `/dashboard/products/${productId}/batches/${batch.id}`,
+                                  `${isStaff ? `/staff/dashboard/products/${productId}/batches/${batch.id}`:`/dashboard/products/${productId}/batches/${batch.id}`}`,
                                 );
                               }
                             }}

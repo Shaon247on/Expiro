@@ -20,29 +20,13 @@ import {
 } from "@/types/notification.type";
 import { toast } from "sonner";
 
-function getNotificationHref(item: NotificationItem) {
-  if (item.notification_type === "low_stock") {
-    return `/dashboard/products/${item.product_id}`;
-  }
 
-  if (
-    item.notification_type === "expiring_soon" ||
-    item.notification_type === "urgent"
-  ) {
-    return `/dashboard/products/${item.product_id}/batches/${item.batch_id}`;
-  }
-
-  if (item.notification_type === "open_item") {
-    return `/dashboard/dlc-track`;
-  }
-
-  return "/dashboard";
-}
 
 export default function NotificationDropdown() {
   const pathname = usePathname();
   const router = useRouter();
   const isSuperAdmin = pathname.startsWith("/admin");
+  const isStaff = pathname.startsWith("/staff");
 
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -56,6 +40,8 @@ export default function NotificationDropdown() {
   async function loadPage(nextPage: number, reset = false) {
     if (loading) return;
     setLoading(true);
+
+    
 
     const result = await getNotificationsAction({ page: nextPage });
 
@@ -95,6 +81,25 @@ useEffect(() => {
     void loadPage(1, true);
   }
 }, [open]);
+
+function getNotificationHref(item: NotificationItem) {
+    if (item.notification_type === "low_stock") {
+      return `${isStaff ? `/staff/dashboard/products/${item.product_id}` : `/dashboard/products/${item.product_id}`}`;
+    }
+
+    if (
+      item.notification_type === "expiring_soon" ||
+      item.notification_type === "urgent"
+    ) {
+      return `${isStaff ? `/staff/dashboard/products/${item.product_id}/batches/${item.batch_id}` : `/dashboard/products/${item.product_id}/batches/${item.batch_id}`}`;
+    }
+
+    if (item.notification_type === "open_item") {
+      return `${isStaff ? "/dashboard/dlc-trust" : "/dashboard/dlc-track"}`;
+    }
+
+    return "/dashboard";
+  }
 
 // Background polling every 2 minutes
 useEffect(() => {
@@ -153,6 +158,8 @@ useEffect(() => {
   };
 }, [open]);
 
+
+
   useEffect(() => {
     if (!open || !hasMore) return;
 
@@ -176,6 +183,7 @@ useEffect(() => {
   }, [open, hasMore, loading, page, items.length]);
 
   async function handleNotificationClick(item: NotificationItem) {
+    
     if (!item.is_read) {
       const result = await markNotificationReadAction(item.id);
 

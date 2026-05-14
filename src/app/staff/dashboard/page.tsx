@@ -65,16 +65,16 @@ export default async function AnalyticsPage() {
           trend: analyticsResult.data?.total_products.trend,
           variant:"emerald"
         },
-        {
-          label: "Total Profit",
-          delta: analyticsResult.data?.total_staff.difference,
-          deltaLabel: "vs last month",
-          trend: analyticsResult.data?.total_staff.trend,
-          variant:
-            analyticsResult.data?.total_staff.trend === "up"
-              ? "green"
-              : "red",
-        },
+        // {
+        //   label: "Total Profit",
+        //   delta: analyticsResult.data?.total_staff.difference,
+        //   deltaLabel: "vs last month",
+        //   trend: analyticsResult.data?.total_staff.trend,
+        //   variant:
+        //     analyticsResult.data?.total_staff.trend === "up"
+        //       ? "green"
+        //       : "red",
+        // },
       ]
     : [];
 

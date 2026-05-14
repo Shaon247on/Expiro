@@ -10,6 +10,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { StatCard } from "@/types/analytics.type";
+import { usePathname } from "next/navigation";
 
 const variantConfig = {
   package: {
@@ -59,8 +60,10 @@ interface AnalyticCardProps {
 }
 
 export function AnalyticCard({ cards }: AnalyticCardProps) {
+  const pathName = usePathname()
+  const isStaff = pathName.startsWith("/staff")
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className={`grid grid-cols-1 ${isStaff ? "sm:grid-cols-3":"sm:grid-cols-2"}  gap-4`}>
       {cards.map((card) => {
         const cfg = variantConfig[card.variant];
         const Icon = cfg.IconEl;

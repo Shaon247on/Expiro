@@ -83,7 +83,7 @@ export default async function ProductsPage({
                 )} of ${totalItems}`}
           </p>
 
-          <StatusFilter currentStatus={activeStatus} />
+          {/* <StatusFilter currentStatus={activeStatus} /> */}
         </div>
       </div>
 

@@ -1,96 +1,118 @@
-import ProductList from "@/components/dashboard/product/Productlist";
-import ProductPagination from "@/components/dashboard/product/Productpagination";
-import StatusFilter from "@/components/dashboard/product/Statusfilter";
 import NotFound from "@/components/elements/NotFound";
-import { StatCardItem } from "@/components/elements/StatCardItem";
-import { STAT_CARDS } from "@/data/alertCardData";
-import { MOCK_PRODUCTS, PAGE_SIZE } from "@/data/productData";
-import { ProductStatus } from "@/types/product.type";
-import Image from "next/image";
+import ProductPagination from "@/components/dashboard/product/Productpagination";
+import {
+  getNotificationSummaryAction,
+  getNotificationsAction,
+} from "@/actions/admin/notification.action";
+import { NOTIFICATION_PAGE_SIZE } from "@/types/notification.type";
+import NotificationSummaryCards from "@/components/dashboard/alart/NotificationSummaryCards";
+import NotificationStatusFilter from "@/components/dashboard/alart/NotificationStatusFilter";
+import NotificationList from "@/components/dashboard/alart/NotificationList";
 
-interface ProductsPageProps {
+interface NotificationPageProps {
   searchParams: Promise<{ page?: string; status?: string }>;
-}
+} 
 
-export const metadata = { title: "Products — Expiro" };
+export const metadata = { title: "Notifications — Expiro" };
 
-const VALID_STATUSES: ProductStatus[] = [
-  "Urgent",
-  "Expiring soon",
-  "Safe Item",
-  "Remove Item",
-  "Open Item",
-];
-
-export default async function ProductsPage({
+export default async function NotificationPage({
   searchParams,
-}: ProductsPageProps) {
+}: NotificationPageProps) {
   const params = await searchParams;
 
-  // ── Status filter ──────────────────────────────────────────────────────────
-  const rawStatus = params?.status ?? "";
-  const activeStatus = VALID_STATUSES.includes(rawStatus as ProductStatus)
-    ? (rawStatus as ProductStatus)
-    : "";
-
-  const filtered = activeStatus
-    ? MOCK_PRODUCTS.filter((p) => p.status === activeStatus)
-    : MOCK_PRODUCTS;
-
-  // ── Pagination ─────────────────────────────────────────────────────────────
   const currentPage = Math.max(1, Number(params?.page ?? 1));
-  const totalItems = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const activeStatus = params?.status ?? "all";
+
+  const [summaryResult, notificationsResult] = await Promise.all([
+    getNotificationSummaryAction(),
+    getNotificationsAction({
+      page: currentPage,
+      filter: activeStatus,
+    }),
+  ]);
+
+  console.log("Notification message:",summaryResult)
+
+  if (!summaryResult.success) {
+    return (
+      <div className="p-5 rounded-2xl bg-white border border-red-100 shadow-sm text-red-500 text-sm">
+        {summaryResult.message}
+      </div>
+    );
+  }
+
+  if (!notificationsResult.success) {
+    return (
+      <div className="p-5 rounded-2xl bg-white border border-red-100 shadow-sm text-red-500 text-sm">
+        {notificationsResult.message}
+      </div>
+    );
+  }
+
+  const notifications = notificationsResult.data ?? [];
+  const totalItems = notificationsResult.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalItems / NOTIFICATION_PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
-  const start = (safePage - 1) * PAGE_SIZE;
-  const products = filtered.slice(start, start + PAGE_SIZE);
+  const start = (safePage - 1) * NOTIFICATION_PAGE_SIZE;
 
-  // Build basePath including status so pagination preserves the filter
-  const paginationBase = activeStatus
-    ? `/dashboard/products?status=${encodeURIComponent(activeStatus)}`
-    : "/dashboard/products";
+  const paginationBase =
+    activeStatus && activeStatus !== "all"
+      ? `/dashboard/alerts?status=${encodeURIComponent(activeStatus)}`
+      : "/dashboard/alerts";
 
-    if(products.length === 0){
-        return <NotFound/>
-    }
+  if (notifications.length === 0 && safePage === 1) {
+    return (
+      <div className="flex flex-col gap-6">
+        <NotificationSummaryCards summary={summaryResult?.data?.summary} />
+
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-bold" style={{ color: "#1A3340" }}>
+              Notifications
+            </h1>
+            <p className="text-sm mt-0.5" style={{ color: "#51564E" }}>
+              Track alerts and product events.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <p className="text-xs text-gray-400">No notifications</p>
+            <NotificationStatusFilter currentStatus={activeStatus === "all" ? "" : activeStatus} />
+          </div>
+        </div>
+
+        <NotFound />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
-      {/* ── Page header ── */}
-      <section aria-label="Summary statistics">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          {STAT_CARDS.map((card) => (
-            <StatCardItem key={card.label} card={card} />
-          ))}
-        </div>
-      </section>
+      <NotificationSummaryCards summary={summaryResult?.data?.summary} />
+
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: "#1A3340" }}>
-            Expiring Products
+            Notifications
           </h1>
           <p className="text-sm mt-0.5" style={{ color: "#51564E" }}>
-            Track products nearing their expiry date.
+            Track alerts and product events.
           </p>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          {/* Count badge */}
           <p className="text-xs text-gray-400">
             {totalItems === 0
-              ? "No products"
-              : `${start + 1}–${Math.min(start + PAGE_SIZE, totalItems)} of ${totalItems}`}
+              ? "No notifications"
+              : `${start + 1}–${Math.min(start + NOTIFICATION_PAGE_SIZE, totalItems)} of ${totalItems}`}
           </p>
 
-          {/* Status filter dropdown (client island) */}
-          <StatusFilter currentStatus={activeStatus} />
+          <NotificationStatusFilter currentStatus={activeStatus === "all" ? "" : activeStatus} />
         </div>
       </div>
 
-      {/* ── Product cards ── */}
-      <ProductList products={products} />
+      <NotificationList notifications={notifications} />
 
-      {/* ── Pagination ── */}
       <ProductPagination
         currentPage={safePage}
         totalPages={totalPages}

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   NOTIFICATION_TYPE_META,
@@ -13,28 +13,32 @@ interface NotificationListProps {
   notifications: NotificationItem[];
 }
 
-function getNotificationHref(item: NotificationItem) {
-  if (item.notification_type === "low_stock") {
-    return `/dashboard/products/${item.product_id}`;
-  }
-
-  if (
-    item.notification_type === "expiring_soon" ||
-    item.notification_type === "urgent"
-  ) {
-    return `/dashboard/products/${item.product_id}/batches/${item.batch_id}`;
-  }
-
-  if (item.notification_type === "open_item") {
-    return `/dashboard/dlc-track`;
-  }
-
-  return "/dashboard";
-}
-
 function NotificationCard({ item }: { item: NotificationItem }) {
   const router = useRouter();
   const meta = NOTIFICATION_TYPE_META[item.notification_type];
+
+  const pathname = usePathname();
+
+  const isStaff = pathname.startsWith("/staff");
+
+  function getNotificationHref(item: NotificationItem) {
+    if (item.notification_type === "low_stock") {
+      return `${isStaff ? `/staff/dashboard/products/${item.product_id}` : `/dashboard/products/${item.product_id}`}`;
+    }
+
+    if (
+      item.notification_type === "expiring_soon" ||
+      item.notification_type === "urgent"
+    ) {
+      return `${isStaff ? `/staff/dashboard/products/${item.product_id}/batches/${item.batch_id}` : `/dashboard/products/${item.product_id}/batches/${item.batch_id}`}`;
+    }
+
+    if (item.notification_type === "open_item") {
+      return `${isStaff ? "/dashboard/dlc-trust" : "/dashboard/dlc-track"}`;
+    }
+
+    return "/dashboard";
+  }
 
   async function handleClick() {
     if (!item.is_read) {
