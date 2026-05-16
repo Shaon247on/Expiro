@@ -11,24 +11,40 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ActivityRow } from "@/types/analytics.type";
 
-const actionBadgeVariant: Record<string, { label: string; className: string }> =
-  {
-    sold: {
-      label: "Sold",
-      className:
-        "bg-green-100 text-green-700 border-green-200 hover:bg-green-100",
-    },
+const actionBadgeVariant: Record<
+  string,
+  { label: string; className: string }
+> = {
+  sold: {
+    label: "Sold",
+    className:
+      "bg-green-100 text-green-700 border-green-200 hover:bg-green-100",
+  },
 
-    batch_created: {
-      label: "Batch Created",
-      className: "bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100",
-    },
+  batch_created: {
+    label: "Batch Created",
+    className:
+      "bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100",
+  },
 
-    removed: {
-      label: "Removed",
-      className: "bg-red-100 text-red-700 border-red-200 hover:bg-red-100",
-    },
-  };
+  product_created: {
+    label: "Product Created",
+    className:
+      "bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-100",
+  },
+
+  opened: {
+    label: "Opened",
+    className:
+      "bg-yellow-100 text-yellow-700 border-yellow-200 hover:bg-yellow-100",
+  },
+
+  removed: {
+    label: "Removed",
+    className:
+      "bg-red-100 text-red-700 border-red-200 hover:bg-red-100",
+  },
+};
 
 interface RecentActivityTableProps {
   rows: ActivityRow[];

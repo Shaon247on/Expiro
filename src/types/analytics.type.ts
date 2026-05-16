@@ -69,11 +69,13 @@ export type SavingFoodSummaryResponse = {
 };
 
 export type SavingFoodPoint = {
-  weekday: string;
-  weekday_number: number;
-  total_food_quantity: number;
-  total_products: number;
-  total_food_value: number;
+  day: string;
+  value: number;
+  // weekday: string;
+  // weekday_number: number;
+  // total_food_quantity: number;
+  // total_products: number;
+  // total_food_value: number;
 };
 
 export type RecentActivitiesResponse = {
@@ -84,11 +86,13 @@ export type RecentActivitiesResponse = {
 };
 
 export type ActivityRow = {
+  id: string;
   user: string;
   product: string;
   quantity: number;
   action: string;
   created_at: string;
+  dateTime?: string;
   tracking_no: string;
   unique_barcode: string | null;
   price: string;
@@ -99,6 +103,6 @@ export type StatCard = {
   value: string | number;
   delta: string | number;
   deltaLabel: string;
-  trend: "up" | "down";
+  // trend: "up" | "down";
   variant: "green" | "yellow" | "red" | "emerald" | "package";
 };

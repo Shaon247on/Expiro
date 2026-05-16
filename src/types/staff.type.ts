@@ -27,6 +27,7 @@ export type StaffListResponse = {
 export type InviteStaffResponse = {
   success: boolean;
   message: string;
+  errors: string[];
   data: {
     id: number;
     name: string;

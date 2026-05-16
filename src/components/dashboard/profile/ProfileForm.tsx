@@ -46,18 +46,18 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 const schema = z.object({
-  firstName: z.string().min(1, "Required."),
-  lastName: z.string().min(1, "Required."),
-  email: z.string().email("Invalid email."),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  email: z.string().email("Invalid email.").optional(),
   phone: z
     .string()
     .trim()
     .regex(
       /^[\d+-]{8,15}$/,
       "Phone number must be 8 to 15 characters and can include digits, +, or -.",
-    ),
-  gender: z.string().min(1, "Required."),
-  dob: z.string().min(1, "Required."),
+    ).optional(),
+  gender: z.string().optional(),
+  dob: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -643,6 +643,13 @@ export default function ProfileForm({
                       {formatDate(profile.expires_at)}
                     </span>
                   </div>
+                  {profile.plan_type === "free" && (
+                    <div className="flex items-center justify-center mt-4">
+                     <Link href={"/pricing"}>
+                      <Button>Upgrade Plan</Button>
+                     </Link>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

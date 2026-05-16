@@ -10,6 +10,7 @@ import type {
   BanUnbanStaffResponse,
   RemoveStaffResponse,
 } from "@/types/staff.type";
+import { error } from "console";
 
 type ActionResult<T = undefined> =
   | {
@@ -88,12 +89,20 @@ export async function inviteStaffAction(payload: {
         },
       },
     );
-
+    console.log("testing the staff:", data);
     revalidatePath("/dashboard/staff");
+
+    if (data.errors) {
+      return {
+        success: true,
+        message: data.errors[0] || "Staff invitation sent successfully.",
+        data: data.data,
+      };
+    }
 
     return {
       success: true,
-      message: data.message || "Staff invitation sent successfully.",
+      message: data.success ? data.message : data.errors[0],
       data: data.data,
     };
   } catch (error: unknown) {
@@ -105,12 +114,16 @@ export async function inviteStaffAction(payload: {
             name?: string[];
             email?: string[];
             phone?: string[];
+            errors?: string[];
           }
         | undefined;
+
+      console.log("testing the staff:", serverData);
 
       return {
         success: false,
         message:
+          serverData?.errors[0] ||
           serverData?.message ||
           serverData?.detail ||
           serverData?.name?.[0] ||
